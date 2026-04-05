@@ -1,0 +1,1338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Simulator</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    #sim {
+      display: grid;
+      width: 1100px;
+      height: 660px;
+      grid-template-columns: 58% 42%;
+      grid-template-rows: 48% 52%;
+      border: 2px solid #444;
+    }
+
+    /* ── Section A : Map (full height, left) ── */
+    #sec-a {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      position: relative;
+      overflow: hidden;
+      border-right: 3px solid #00aaff;
+      background: #0a1728;
+    }
+
+    #map-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: #0a1728;
+    }
+
+    #map-bg iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      filter: saturate(0.9) contrast(1.05);
+    }
+
+    #cMap {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+    }
+
+    /* ── Section B : Cockpit (top right) ── */
+    #sec-b {
+      grid-column: 2;
+      grid-row: 1;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 3px solid #00aaff;
+    }
+
+    /* ── Section C : Instruments (bottom right) ── */
+    #sec-c {
+      grid-column: 2;
+      grid-row: 2;
+      background: #080814;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 16px 14px;
+      gap: 8px;
+      position: relative;
+    }
+
+    /* Section labels (A, B, C circles) */
+    .slbl {
+      position: absolute;
+      top: 8px; left: 8px;
+      width: 30px; height: 30px;
+      border: 2px solid #000;
+      border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: bold; font-size: 13px; color: #000;
+      z-index: 100;
+    }
+    #lbl-c { left: auto; right: 8px; }
+
+    canvas { display: block; }
+
+    /* Instruments strip */
+    .instr-row {
+      display: flex;
+      gap: 4px;
+      margin-top: 4px;
+      justify-content: center;
+    }
+
+    .instr-row canvas {
+      display: block;
+    }
+
+    .cfg-panel {
+      border: 1px solid #334;
+      background: #101022;
+      padding: 5px;
+      margin-top: 24px;
+    }
+
+    .cfg-panel summary {
+      cursor: pointer;
+      color: #9fd7ff;
+      font-size: 10px;
+      user-select: none;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .cfg-grid {
+      margin-top: 4px;
+      display: grid;
+      grid-template-columns: 1fr 66px 1fr 66px;
+      gap: 3px 6px;
+      align-items: center;
+    }
+
+    .cfg-grid label {
+      color: #b8c4e0;
+      font-size: 9px;
+      line-height: 1.1;
+    }
+
+    .cfg-grid input[type="number"],
+    .cfg-grid input[type="text"] {
+      background: #070712;
+      border: 1px solid #365;
+      color: #dff;
+      font-size: 9px;
+      padding: 1px 3px;
+      width: 100%;
+    }
+
+    .cfg-grid input[type="checkbox"] {
+      justify-self: start;
+      accent-color: #00c58a;
+    }
+
+    .cfg-span-all {
+      grid-column: 1 / -1;
+    }
+
+    .cfg-actions {
+      margin-top: 4px;
+      display: flex;
+      gap: 5px;
+      justify-content: flex-end;
+    }
+
+    .cfg-btn {
+      border: 1px solid #00aaff;
+      background: #0a1e2f;
+      color: #9ad8ff;
+      padding: 1px 6px;
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    .cfg-btn:hover {
+      background: #12324a;
+    }
+
+    @media (max-width: 1060px) {
+      .cfg-grid {
+        grid-template-columns: 1fr 66px;
+      }
+    }
+
+    /* Heading readout */
+    .hdg-line {
+      color: #00aaff;
+      font-size: 12px;
+      text-align: right;
+      margin-right: 2px;
+    }
+
+    /* Arrow buttons */
+    .ctrl-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .sim-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .sim-btn {
+      border: 1px solid #e5b300;
+      background: #2e2400;
+      color: #ffe27a;
+      padding: 2px 8px;
+      font-size: 10px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .sim-btn:hover {
+      background: #453500;
+    }
+
+    .btn {
+      width: 50px; height: 50px;
+      border: 2px solid #00cc55;
+      background: transparent;
+      color: #00cc55;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      user-select: none;
+      transition: background .1s;
+    }
+    .btn:hover  { background: rgba(0,204,85,.12); }
+    .btn:active { background: rgba(0,204,85,.28); }
+
+    /* Small hint at bottom of section C */
+    .hint {
+      color: #444;
+      font-size: 10px;
+      text-align: right;
+      margin-top: -4px;
+    }
+
+    .game-status {
+      color: #ffce00;
+      font-size: 11px;
+      text-align: right;
+      min-height: 14px;
+      margin-top: 2px;
+    }
+
+    #copyright {
+      position: absolute;
+      bottom: 5px;
+      right: 7px;
+      color: rgba(200,200,200,0.55);
+      font-size: 9px;
+      text-align: right;
+      pointer-events: none;
+      line-height: 1.5;
+      z-index: 200;
+    }
+
+    /* ── Banner LGPD ── */
+    #lgpd-banner {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: #0d1b2e;
+      border-top: 2px solid #00aaff;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      z-index: 9999;
+      font-size: 11px;
+      color: #b8cce8;
+    }
+    #lgpd-banner p { flex: 1; line-height: 1.5; }
+    #lgpd-banner a { color: #7fc9ff; }
+    .lgpd-btn {
+      border: 1px solid #00aaff;
+      background: #0a2a44;
+      color: #7fc9ff;
+      padding: 5px 14px;
+      cursor: pointer;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .lgpd-btn.recusar {
+      border-color: #666;
+      background: #1a1a1a;
+      color: #888;
+    }
+    .lgpd-btn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+
+<!-- ══ Banner LGPD ══ -->
+<div id="lgpd-banner">
+  <p>
+    <strong>Privacidade &amp; Cookies</strong> — Este simulador coleta dados an&ocirc;nimos de acesso
+    (navegador, resolu&ccedil;&atilde;o, dura&ccedil;&atilde;o da sess&atilde;o) para fins estat&iacute;sticos,
+    conforme a <strong>LGPD (Lei 13.709/18)</strong>. Nenhum dado pessoal identificado &eacute; registrado.
+    <a href="mailto:lcavamura@gmail.com">Contato do respons&aacute;vel</a>.
+  </p>
+  <button class="lgpd-btn" id="lgpd-aceitar">Aceitar</button>
+  <button class="lgpd-btn recusar" id="lgpd-recusar">Recusar</button>
+</div>
+
+<div id="sim">
+
+  <!-- ══ A : Map ══ -->
+  <div id="sec-a">
+    <div class="slbl">A</div>
+    <div id="map-bg"><iframe id="gmFrame" title="Mapa"></iframe></div>
+    <canvas id="cMap"></canvas>
+  </div>
+
+  <!-- ══ B : Cockpit / Artificial Horizon ══ -->
+  <div id="sec-b">
+    <div class="slbl">B</div>
+    <canvas id="cCockpit"></canvas>
+  </div>
+
+  <!-- ══ C : Instruments + Controls ══ -->
+  <div id="sec-c">
+    <div class="slbl" id="lbl-c">C</div>
+    <details class="cfg-panel" id="cfg-panel">
+      <summary>Configuracao da simulacao</summary>
+      <div class="cfg-grid">
+        <label for="cfg-alt">Altitude inicial (m)</label>
+        <input id="cfg-alt" type="number" min="100" max="5000" step="10" value="600" />
+
+        <label for="cfg-thermals">Maximo de termicas</label>
+        <input id="cfg-thermals" type="number" min="1" max="30" step="1" value="8" />
+
+        <label for="cfg-show-thermals">Mostrar termicas</label>
+        <input id="cfg-show-thermals" type="checkbox" checked />
+
+        <label for="cfg-show-trail">Mostrar trajetoria</label>
+        <input id="cfg-show-trail" type="checkbox" checked />
+
+        <label for="cfg-gmap">Usar Google Maps</label>
+        <input id="cfg-gmap" type="checkbox" />
+
+        <label for="cfg-map-sat">Camada satelite</label>
+        <input id="cfg-map-sat" type="checkbox" checked />
+
+        <label class="cfg-span-all" for="cfg-map-query">Local do mapa</label>
+        <input class="cfg-span-all" id="cfg-map-query" type="text" value="Campinas, Brasil" />
+
+        <label for="cfg-map-zoom">Zoom do mapa</label>
+        <input id="cfg-map-zoom" type="number" min="1" max="20" step="1" value="13" />
+
+        <label class="cfg-span-all" for="cfg-script-url">URL Apps Script (log)</label>
+        <input class="cfg-span-all" id="cfg-script-url" type="text" placeholder="https://script.google.com/macros/s/..." />
+      </div>
+      <div class="cfg-actions">
+        <button class="cfg-btn" id="cfg-apply" type="button">Aplicar</button>
+        <button class="cfg-btn" id="cfg-reset" type="button">Reiniciar</button>
+      </div>
+    </details>
+    <div class="instr-row">
+      <canvas id="g-speed"  width="118" height="118"></canvas>
+      <canvas id="g-alt"    width="118" height="118"></canvas>
+      <canvas id="g-climb"  width="118" height="118"></canvas>
+    </div>
+    <div class="hdg-line" id="v-hdg">HDG: 000°</div>
+    <div class="game-status" id="v-status"></div>
+    <div class="ctrl-row">
+      <button class="btn" id="bLeft"  title="Curvar Esquerda 5°">&#8592;</button>
+      <button class="btn" id="bUp"    title="Aumentar Velocidade">&#8593;</button>
+      <button class="btn" id="bRight" title="Curvar Direita 5°">&#8594;</button>
+    </div>
+    <div class="sim-actions">
+      <button class="sim-btn" id="bPause" type="button">Pause</button>
+      <button class="sim-btn" id="bResetSim" type="button">Reset</button>
+    </div>
+    <div class="hint">Teclado: ← ↑ → (↓ reduz velocidade). Curvas: 5° por clique.</div>
+  </div>
+
+  <div id="copyright">
+    &copy; 2026 L. Cavamura Jr. &mdash; Todos os direitos reservados.<br>
+    lcavamura@gmail.com
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+let config = {
+  initialAltitudeM: 600,
+  maxThermals: 8,
+  showThermals: true,
+  showTrail: true,
+  useGoogleMap: false,
+  mapSatellite: true,
+  mapQuery: 'Campinas, Brasil',
+  mapZoom: 13,
+  scriptUrl: '',
+};
+
+// ── Rastreamento de sessão ──────────────────────────────────
+const session = {
+  inicio: Date.now(),
+  tempoVooSeg: 0,
+  altitudeMax: 0,
+  consentido: null,    // true | false | null (ainda não respondeu)
+  enviado: false,
+};
+
+const ac = {
+  x: 320,
+  y: 320,
+  hdg: 0,
+  speed: 120,
+  alt: config.initialAltitudeM,
+  climb: 0,
+  bank: 0,
+};
+
+const MIN_SPEED = 60;
+const MAX_SPEED = 400;
+const MAX_BANK = 70;
+const TURN_GAIN = 0.45;
+
+let worldW = 0;
+let worldH = 0;
+let thermals = [];
+let trail = [];
+let gameOver = false;
+let isPaused = false;
+
+const cMap = document.getElementById('cMap');
+const ctxM = cMap.getContext('2d');
+const cCockpit = document.getElementById('cCockpit');
+const ctxC = cCockpit.getContext('2d');
+const statusEl = document.getElementById('v-status');
+const cfgAltEl = document.getElementById('cfg-alt');
+const cfgThermalsEl = document.getElementById('cfg-thermals');
+const cfgShowThermalsEl = document.getElementById('cfg-show-thermals');
+const cfgShowTrailEl = document.getElementById('cfg-show-trail');
+const cfgGmapEl = document.getElementById('cfg-gmap');
+const cfgMapSatelliteEl = document.getElementById('cfg-map-sat');
+const cfgMapQueryEl = document.getElementById('cfg-map-query');
+const cfgMapZoomEl  = document.getElementById('cfg-map-zoom');
+const cfgScriptUrlEl = document.getElementById('cfg-script-url');
+const cfgApplyBtn = document.getElementById('cfg-apply');
+const cfgResetBtn = document.getElementById('cfg-reset');
+const pauseBtn = document.getElementById('bPause');
+const resetSimBtn = document.getElementById('bResetSim');
+
+function parseNumber(value, fallback, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function readConfigFromPanel() {
+  return {
+    initialAltitudeM: parseNumber(cfgAltEl.value, 600, 100, 5000),
+    maxThermals: parseNumber(cfgThermalsEl.value, 8, 1, 30),
+    showThermals: cfgShowThermalsEl.checked,
+    showTrail: cfgShowTrailEl.checked,
+    useGoogleMap: cfgGmapEl.checked,
+    mapSatellite: cfgMapSatelliteEl.checked,
+    mapQuery: (cfgMapQueryEl.value || 'Campinas, Brasil').trim(),
+    mapZoom: parseNumber(cfgMapZoomEl.value, 13, 1, 20),
+    scriptUrl: cfgScriptUrlEl.value.trim(),
+  };
+}
+
+function syncPanelFromConfig() {
+  cfgAltEl.value = String(config.initialAltitudeM);
+  cfgThermalsEl.value = String(config.maxThermals);
+  cfgShowThermalsEl.checked = config.showThermals;
+  cfgShowTrailEl.checked = config.showTrail;
+  cfgGmapEl.checked = config.useGoogleMap;
+  cfgMapSatelliteEl.checked = config.mapSatellite;
+  cfgMapQueryEl.value = config.mapQuery;
+  cfgMapZoomEl.value = String(config.mapZoom);
+  cfgScriptUrlEl.value = config.scriptUrl;
+}
+
+function applyConfig(shouldResetFlight) {
+  config = readConfigFromPanel();
+  setupMapBackground();
+  generateThermals();
+
+  if (shouldResetFlight) {
+    ac.x = worldW / 2;
+    ac.y = worldH / 2;
+    ac.hdg = 0;
+    ac.bank = 0;
+    ac.speed = 120;
+    ac.alt = config.initialAltitudeM;
+    ac.climb = 0;
+    gameOver = false;
+    trail = [];
+  }
+}
+
+function resetSimulation() {
+  // Envia dados da sessão anterior antes de reiniciar
+  enviarLog('reset');
+  applyConfig(true);
+  // Reinicia rastreamento
+  session.inicio = Date.now();
+  session.tempoVooSeg = 0;
+  session.altitudeMax = config.initialAltitudeM;
+  session.enviado = false;
+  isPaused = false;
+  pauseBtn.textContent = 'Pause';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LGPD — Consentimento
+// ═══════════════════════════════════════════════════════════
+function initLgpd() {
+  const stored = localStorage.getItem('glider_lgpd');
+  if (stored !== null) {
+    session.consentido = stored === '1';
+    document.getElementById('lgpd-banner').style.display = 'none';
+    if (session.consentido) enviarLog('acesso');
+    return;
+  }
+  document.getElementById('lgpd-aceitar').addEventListener('click', () => {
+    localStorage.setItem('glider_lgpd', '1');
+    session.consentido = true;
+    document.getElementById('lgpd-banner').style.display = 'none';
+    enviarLog('acesso');
+  });
+  document.getElementById('lgpd-recusar').addEventListener('click', () => {
+    localStorage.setItem('glider_lgpd', '0');
+    session.consentido = false;
+    document.getElementById('lgpd-banner').style.display = 'none';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COLETA E ENVIO DE DADOS
+// ═══════════════════════════════════════════════════════════
+function detectarNavegador() {
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua))    return 'Edge';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua)) return 'Safari';
+  if (/OPR\/|Opera\//.test(ua)) return 'Opera';
+  return 'Outro';
+}
+
+function detectarSO() {
+  const ua = navigator.userAgent;
+  if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/iPhone|iPad/.test(ua)) return 'iOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Outro';
+}
+
+function enviarLog(evento) {
+  if (!session.consentido) return;
+  const url = config.scriptUrl || cfgScriptUrlEl.value.trim();
+  if (!url || !url.startsWith('https://script.google.com/')) return;
+
+  const agora = Date.now();
+  const payload = {
+    evento,
+    navegador:     detectarNavegador(),
+    so:            detectarSO(),
+    resolucao:     screen.width + 'x' + screen.height,
+    duracao_seg:   Math.round((agora - session.inicio) / 1000),
+    tempo_voo_seg: Math.round(session.tempoVooSeg),
+    altitude_max:  Math.round(session.altitudeMax),
+    ip_anon:       '',    // preenchido assincronamente se disponível
+    consentimento: 'sim',
+  };
+
+  // Tenta obter IP anonimizado (apenas 3 primeiros octetos)
+  fetch('https://api.ipify.org?format=json', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(d => {
+      const partes = (d.ip || '').split('.');
+      if (partes.length === 4) payload.ip_anon = partes[0]+'.'+partes[1]+'.'+partes[2]+'.xxx';
+    })
+    .catch(() => {})
+    .finally(() => {
+      fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors',
+      }).catch(() => {});
+    });
+}
+
+function setupMapBackground() {
+  const mapBg = document.getElementById('map-bg');
+  const gmFrame = document.getElementById('gmFrame');
+  if (!config.useGoogleMap) {
+    mapBg.style.display = 'none';
+    gmFrame.src = '';
+    return;
+  }
+  mapBg.style.display = 'block';
+  const q = encodeURIComponent(config.mapQuery);
+  const layer = config.mapSatellite ? 'k' : 'm';
+  gmFrame.src = 'https://www.google.com/maps?q=' + q + '&t=' + layer + '&z=' + config.mapZoom + '&output=embed';
+}
+
+function resize() {
+  const a = document.getElementById('sec-a');
+  const b = document.getElementById('sec-b');
+  cMap.width = a.clientWidth;
+  cMap.height = a.clientHeight;
+  cCockpit.width = b.clientWidth;
+  cCockpit.height = b.clientHeight;
+
+  worldW = cMap.width;
+  worldH = cMap.height;
+  ac.x = Math.max(0, Math.min(worldW, ac.x));
+  ac.y = Math.max(0, Math.min(worldH, ac.y));
+
+  generateThermals();
+}
+window.addEventListener('resize', resize);
+
+cfgApplyBtn.addEventListener('click', () => {
+  applyConfig(false);
+});
+
+cfgResetBtn.addEventListener('click', () => {
+  resetSimulation();
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (gameOver) return;
+  isPaused = !isPaused;
+  pauseBtn.textContent = isPaused ? 'Retomar' : 'Pause';
+});
+
+resetSimBtn.addEventListener('click', () => {
+  resetSimulation();
+});
+
+cfgGmapEl.addEventListener('change', () => {
+  const enabled = cfgGmapEl.checked;
+  cfgMapSatelliteEl.disabled = !enabled;
+  cfgMapQueryEl.disabled = !enabled;
+  cfgMapZoomEl.disabled = !enabled;
+});
+
+function random(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function generateThermals() {
+  thermals = [];
+  if (worldW < 60 || worldH < 60) return;
+
+  const count = Math.floor(random(1, config.maxThermals + 1));
+  const maxDiameter = Math.min(worldW, worldH) / 3;
+  const minDiameter = Math.max(70, maxDiameter * 0.45);
+
+  for (let i = 0; i < count; i++) {
+    const d = random(minDiameter, maxDiameter);
+    const r = d / 2;
+    thermals.push({
+      x: random(r + 4, worldW - r - 4),
+      y: random(r + 4, worldH - r - 4),
+      r,
+    });
+  }
+}
+
+function thermalLiftAt(x, y) {
+  let bestLift = 0;
+  for (let i = 0; i < thermals.length; i++) {
+    const t = thermals[i];
+    const dx = x - t.x;
+    const dy = y - t.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > t.r) continue;
+
+    const band = Math.min(4, Math.floor((dist / t.r) * 5));
+    const level = 5 - band;
+    bestLift = Math.max(bestLift, level);
+  }
+  return bestLift;
+}
+
+function drawMap() {
+  const W = cMap.width;
+  const H = cMap.height;
+  if (!W || !H) return;
+
+  ctxM.clearRect(0, 0, W, H);
+
+  if (!config.useGoogleMap) {
+    ctxM.fillStyle = '#0e2238';
+    ctxM.fillRect(0, 0, W, H);
+  }
+
+  ctxM.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctxM.lineWidth = 1;
+  const gs = 70;
+  for (let gx = 0; gx <= W; gx += gs) {
+    ctxM.beginPath();
+    ctxM.moveTo(gx, 0);
+    ctxM.lineTo(gx, H);
+    ctxM.stroke();
+  }
+  for (let gy = 0; gy <= H; gy += gs) {
+    ctxM.beginPath();
+    ctxM.moveTo(0, gy);
+    ctxM.lineTo(W, gy);
+    ctxM.stroke();
+  }
+
+  if (config.showTrail && trail.length > 1) {
+    ctxM.strokeStyle = '#ff00d4';
+    ctxM.lineWidth = 2;
+    ctxM.beginPath();
+    for (let i = 0; i < trail.length; i++) {
+      const p = trail[i];
+      if (i === 0) ctxM.moveTo(p.x, p.y);
+      else ctxM.lineTo(p.x, p.y);
+    }
+    ctxM.stroke();
+  }
+
+  if (config.showThermals) {
+    drawThermals();
+  }
+
+  drawPlane(ctxM, ac.x, ac.y, ac.hdg, 0.5);
+  drawCompass(ctxM, 46, H - 46, ac.hdg);
+
+  ctxM.fillStyle = 'rgba(0,0,0,0.55)';
+  ctxM.fillRect(W - 150, 4, 146, 18);
+  ctxM.fillStyle = '#f0f0f0';
+  ctxM.font = '10px Courier New';
+  ctxM.textAlign = 'right';
+  ctxM.fillText('X:' + Math.round(ac.x) + ' Y:' + Math.round(ac.y), W - 6, 16);
+
+  if (gameOver) {
+    ctxM.fillStyle = 'rgba(0,0,0,0.65)';
+    ctxM.fillRect(0, 0, W, H);
+    ctxM.fillStyle = '#ff4444';
+    ctxM.font = 'bold 34px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.fillText('FIM DA SIMULACAO', W / 2, H / 2 - 8);
+    ctxM.fillStyle = '#ffd066';
+    ctxM.font = '14px Courier New';
+    ctxM.fillText('Altitude chegou a 0 metros', W / 2, H / 2 + 20);
+  } else if (isPaused) {
+    ctxM.fillStyle = 'rgba(0,0,0,0.5)';
+    ctxM.fillRect(0, 0, W, H);
+    ctxM.fillStyle = '#ffe27a';
+    ctxM.font = 'bold 30px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.fillText('PAUSADO', W / 2, H / 2 - 2);
+  }
+}
+
+function drawThermals() {
+  for (let i = 0; i < thermals.length; i++) {
+    const t = thermals[i];
+    const bandH = t.r / 5;
+
+    for (let level = 1; level <= 5; level++) {
+      const outerR = t.r - (level - 1) * bandH;
+      const innerR = t.r - level * bandH;
+      const alpha = 0.12 + level * 0.06;
+
+      ctxM.beginPath();
+      ctxM.arc(t.x, t.y, outerR, 0, Math.PI * 2);
+      ctxM.arc(t.x, t.y, Math.max(innerR, 0), 0, Math.PI * 2, true);
+      ctxM.closePath();
+      ctxM.fillStyle = 'rgba(255,0,0,' + alpha.toFixed(3) + ')';
+      ctxM.fill();
+
+      ctxM.strokeStyle = 'rgba(255,0,0,0.9)';
+      ctxM.lineWidth = 1;
+      ctxM.beginPath();
+      ctxM.arc(t.x, t.y, outerR, 0, Math.PI * 2);
+      ctxM.stroke();
+    }
+
+    ctxM.fillStyle = '#ff0000';
+    ctxM.font = 'bold 11px Courier New';
+    ctxM.textAlign = 'center';
+    for (let level = 1; level <= 5; level++) {
+      const labelR = t.r - (level - 0.5) * bandH;
+      const ly = t.y - labelR + 3;
+      ctxM.fillText(String(level), t.x, ly);
+    }
+  }
+}
+
+function drawPlane(ctx, x, y, hdg, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.rotate(hdg * Math.PI / 180);
+
+  ctx.strokeStyle = '#ffe900';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(0, 14);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(-6, -5);
+  ctx.lineTo(6, -5);
+  ctx.lineTo(22, 0);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-10, 14);
+  ctx.lineTo(10, 14);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ff3b30';
+  ctx.beginPath();
+  ctx.arc(0, -18, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCompass(ctx, x, y, hdg) {
+  const r = 32;
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.52)';
+  ctx.beginPath(); ctx.arc(0, 0, r+3, 0, Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle = '#999';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.stroke();
+
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [['N',0],['E',90],['S',180],['W',270]].forEach(([lbl, ang]) => {
+    const rad = (ang - 90) * Math.PI / 180;
+    ctx.fillStyle = lbl === 'N' ? '#ff5555' : '#cccccc';
+    ctx.fillText(lbl, Math.cos(rad)*(r-10), Math.sin(rad)*(r-10));
+  });
+
+  // Ponteiro de rumo
+  ctx.save();
+  ctx.rotate((hdg - 90) * Math.PI / 180);
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(0, -(r-4));
+  ctx.lineTo(-4, -(r-15));
+  ctx.lineTo(4, -(r-15));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DESENHO DO COCKPIT / HORIZONTE ARTIFICIAL (Seção B)
+// ═══════════════════════════════════════════════════════════
+function drawCockpit() {
+  const W = cCockpit.width, H = cCockpit.height;
+  if (!W || !H) return;
+  const ctx = ctxC;
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Horizonte (rotaciona com o bank) ──
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  ctx.rotate(ac.bank * Math.PI / 180);
+
+  const ext = Math.max(W, H) * 1.6;
+
+  // Céu
+  const sky = ctx.createLinearGradient(0, -ext, 0, 0);
+  sky.addColorStop(0, '#062240');
+  sky.addColorStop(1, '#1464a8');
+  ctx.fillStyle = sky;
+  ctx.fillRect(-ext, -ext, ext*2, ext);
+
+  // Solo
+  const gnd = ctx.createLinearGradient(0, 0, 0, ext);
+  gnd.addColorStop(0, '#5a3208');
+  gnd.addColorStop(1, '#271600');
+  ctx.fillStyle = gnd;
+  ctx.fillRect(-ext, 0, ext*2, ext);
+
+  // Linha de horizonte vermelha
+  ctx.strokeStyle = '#ff2222';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-ext, 0); ctx.lineTo(ext, 0); ctx.stroke();
+
+  // Linhas de pitch (±5°, ±10°, ±15°, ±20°, ±30°)
+  const pxPerDeg = H / 40;
+  ctx.lineWidth = 1;
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  for (let p = -30; p <= 30; p += 5) {
+    if (p === 0) continue;
+    const py = -p * pxPerDeg;
+    const len = (p % 10 === 0) ? 48 : 24;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath(); ctx.moveTo(-len, py); ctx.lineTo(len, py); ctx.stroke();
+    if (p % 10 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText(Math.abs(p) + '°', len + 4, py + 4);
+    }
+  }
+  ctx.restore();
+
+  // ── Overlay fixo (não rotaciona) ──
+  const cx = W/2, cy = H/2;
+
+  // Símbolo de referência da aeronave (asas brancas)
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(cx-64, cy); ctx.lineTo(cx-18, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-18, cy); ctx.lineTo(cx-18, cy+10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+18, cy); ctx.lineTo(cx+64, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+18, cy); ctx.lineTo(cx+18, cy+10); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+
+  // Arco de ângulo de banco
+  drawBankArc(ctx, cx, cy, Math.min(W, H) * 0.44);
+
+  // Fita de rumo (topo)
+  drawHdgTape(ctx, W, H);
+
+  // Caixas laterais velocidade/altitude
+  drawSideBoxes(ctx, W, H);
+}
+
+function drawBankArc(ctx, cx, cy, r) {
+  ctx.strokeStyle = '#ffcc00';
+  ctx.fillStyle = '#ffcc00';
+  ctx.lineWidth = 1.5;
+  [-70, -60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60, 70].forEach(a => {
+    const rad = (a - 90) * Math.PI / 180;
+    const len = (Math.abs(a) % 30 === 0) ? 13 : 7;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(rad)*r,     cy + Math.sin(rad)*r);
+    ctx.lineTo(cx + Math.cos(rad)*(r-len), cy + Math.sin(rad)*(r-len));
+    ctx.stroke();
+  });
+
+  // Ponteiro de bank
+  const bRad = (ac.bank - 90) * Math.PI / 180;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(bRad)*r,         cy + Math.sin(bRad)*r);
+  ctx.lineTo(cx + Math.cos(bRad+0.1)*(r-16), cy + Math.sin(bRad+0.1)*(r-16));
+  ctx.lineTo(cx + Math.cos(bRad-0.1)*(r-16), cy + Math.sin(bRad-0.1)*(r-16));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawHdgTape(ctx, W, H) {
+  const bW = W * 0.56, bH = 22;
+  const bx = (W - bW) / 2, by = 7;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.58)';
+  ctx.fillRect(bx, by, bW, bH);
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bW, bH);
+
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const range = 50;
+  for (let d = -range; d <= range; d += 5) {
+    const h = ((ac.hdg + d) % 360 + 360) % 360;
+    const px = bx + bW/2 + (d / range) * (bW/2);
+    if (px < bx + 2 || px > bx + bW - 2) continue;
+    const tickH = (h % 10 === 0) ? 9 : 5;
+    ctx.strokeStyle = 'rgba(200,200,200,0.65)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, by+bH); ctx.lineTo(px, by+bH-tickH); ctx.stroke();
+    if (h % 30 === 0) {
+      ctx.fillStyle = '#ddd';
+      ctx.fillText(String(h).padStart(3,'0'), px, by + 10);
+    }
+  }
+
+  // Seta central (amarela)
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath();
+  ctx.moveTo(bx+bW/2-6, by+bH+1);
+  ctx.lineTo(bx+bW/2+6, by+bH+1);
+  ctx.lineTo(bx+bW/2,   by+bH-7);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawSideBoxes(ctx, W, H) {
+  // Velocidade (esquerda)
+  const boxW = 55, boxH = 56;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(8, H/2-boxH/2, boxW, boxH);
+  ctx.strokeStyle = '#00dd66'; ctx.lineWidth = 1;
+  ctx.strokeRect(8, H/2-boxH/2, boxW, boxH);
+  ctx.fillStyle = '#00dd66';
+  ctx.font = 'bold 15px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(ac.speed, 8+boxW/2, H/2-6);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#88ffbb';
+  ctx.fillText('kt', 8+boxW/2, H/2+12);
+
+  // Altitude (direita)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(W-8-boxW, H/2-boxH/2, boxW, boxH);
+  ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 1;
+  ctx.strokeRect(W-8-boxW, H/2-boxH/2, boxW, boxH);
+  ctx.fillStyle = '#00aaff';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(Math.round(ac.alt), W-8-boxW/2, H/2-7);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#88ccff';
+  ctx.fillText('m', W-8-boxW/2, H/2+9);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INSTRUMENTOS ANALÓGICOS (Seção C)
+// ═══════════════════════════════════════════════════════════
+const gSpeed = document.getElementById('g-speed').getContext('2d');
+const gAlt   = document.getElementById('g-alt').getContext('2d');
+const gClimb = document.getElementById('g-climb').getContext('2d');
+
+function drawGauge(ctx, opts) {
+  const {
+    value, minVal, maxVal,
+    startAngle, endAngle,
+    label, unit,
+    ticks, subTicks,
+    needleColor,
+    dangerZone,
+  } = opts;
+
+  const W = ctx.canvas.width, H = ctx.canvas.height;
+  const cx = W / 2, cy = H / 2;
+  const R = W * 0.44;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Bezel (outer ring)
+  const bezel = ctx.createRadialGradient(cx, cy - R * 0.1, R * 0.55, cx, cy, R * 1.05);
+  bezel.addColorStop(0, '#3a3a3a');
+  bezel.addColorStop(1, '#111');
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, Math.PI * 2);
+  ctx.fillStyle = bezel; ctx.fill();
+
+  // Glass face
+  const face = ctx.createRadialGradient(cx, cy - R * 0.25, R * 0.1, cx, cy, R);
+  face.addColorStop(0, '#1a2540');
+  face.addColorStop(1, '#0b0f1e');
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.fillStyle = face; ctx.fill();
+
+  const sweep = endAngle - startAngle;
+
+  // Danger zone arc
+  if (dangerZone) {
+    const dStart = startAngle + (dangerZone[0] - minVal) / (maxVal - minVal) * sweep;
+    const dEnd   = startAngle + (dangerZone[1] - minVal) / (maxVal - minVal) * sweep;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R * 0.88, dStart, dEnd);
+    ctx.strokeStyle = 'rgba(255,60,60,0.55)';
+    ctx.lineWidth = R * 0.06;
+    ctx.stroke();
+  }
+
+  // Sub-ticks
+  if (subTicks) {
+    for (let i = 0; i <= subTicks; i++) {
+      const a = startAngle + (i / subTicks) * sweep;
+      const inner = R * 0.80, outer = R * 0.88;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+      ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+      ctx.strokeStyle = 'rgba(200,200,200,0.35)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+  }
+
+  // Major ticks + labels
+  ticks.forEach(t => {
+    const norm = (t.v - minVal) / (maxVal - minVal);
+    const a = startAngle + norm * sweep;
+    const inner = R * 0.72, outer = R * 0.88;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    ctx.lineTo(cx + Math.cos(a) * outer, cy + Math.sin(a) * outer);
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    if (t.lbl !== undefined) {
+      const lx = cx + Math.cos(a) * R * 0.58;
+      const ly = cy + Math.sin(a) * R * 0.58;
+      ctx.fillStyle = '#d0d8f0';
+      ctx.font = 'bold ' + Math.round(R * 0.155) + 'px Courier New';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(t.lbl, lx, ly);
+    }
+  });
+
+  // Needle
+  const norm = Math.max(0, Math.min(1, (value - minVal) / (maxVal - minVal)));
+  const needleAngle = startAngle + norm * sweep;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(needleAngle + Math.PI / 2);
+  ctx.beginPath();
+  ctx.moveTo(-4, 0);
+  ctx.lineTo(0, -(R * 0.75));
+  ctx.lineTo(4, 0);
+  ctx.closePath();
+  ctx.fillStyle = needleColor || '#ff4422';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-3, 0);
+  ctx.lineTo(0, R * 0.18);
+  ctx.lineTo(3, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#883311';
+  ctx.fill();
+  ctx.restore();
+
+  // Center cap
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.09, 0, Math.PI * 2);
+  ctx.fillStyle = '#222'; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.05, 0, Math.PI * 2);
+  ctx.fillStyle = '#ccc'; ctx.fill();
+
+  // Label (bottom)
+  ctx.fillStyle = '#8899cc';
+  ctx.font = 'bold ' + Math.round(R * 0.17) + 'px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, cx, cy + R * 0.45);
+
+  // Digital value (below center)
+  ctx.fillStyle = '#ffe27a';
+  ctx.font = Math.round(R * 0.175) + 'px Courier New';
+  ctx.fillText(value.toFixed(value % 1 === 0 ? 0 : 1) + ' ' + unit, cx, cy + R * 0.28);
+
+  // Rim highlight
+  ctx.beginPath(); ctx.arc(cx, cy, R * 1.05, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1; ctx.stroke();
+}
+
+function updateHUD() {
+  // Velocímetro
+  drawGauge(gSpeed, {
+    value: ac.speed,
+    minVal: 0, maxVal: 400,
+    startAngle: Math.PI * 0.75, endAngle: Math.PI * 2.25,
+    label: 'VELOC.', unit: 'kt',
+    subTicks: 40,
+    ticks: [
+      {v:0,lbl:'0'},{v:50,lbl:'50'},{v:100,lbl:'100'},
+      {v:150,lbl:'150'},{v:200,lbl:'200'},{v:300,lbl:'300'},{v:400,lbl:'400'}
+    ],
+    needleColor: '#00e87a',
+    dangerZone: [350, 400],
+  });
+
+  // Altímetro
+  drawGauge(gAlt, {
+    value: Math.max(0, ac.alt),
+    minVal: 0, maxVal: config.initialAltitudeM <= 600 ? 1000 : config.initialAltitudeM * 1.5,
+    startAngle: Math.PI * 0.75, endAngle: Math.PI * 2.25,
+    label: 'ALT.', unit: 'm',
+    subTicks: 20,
+    ticks: (function() {
+      const mx = config.initialAltitudeM <= 600 ? 1000 : Math.ceil(config.initialAltitudeM * 1.5 / 500) * 500;
+      const step = mx <= 1000 ? 200 : mx <= 3000 ? 500 : 1000;
+      const arr = [];
+      for (let v = 0; v <= mx; v += step) arr.push({v, lbl: String(v)});
+      return arr;
+    }()),
+    needleColor: '#00aaff',
+    dangerZone: [0, (config.initialAltitudeM <= 600 ? 1000 : config.initialAltitudeM * 1.5) * 0.1],
+  });
+
+  // Variômetro
+  drawGauge(gClimb, {
+    value: ac.climb,
+    minVal: -5, maxVal: 5,
+    startAngle: Math.PI * 0.75, endAngle: Math.PI * 2.25,
+    label: 'CLIMB', unit: 'm/s',
+    subTicks: 20,
+    ticks: [
+      {v:-5,lbl:'-5'},{v:-3,lbl:'-3'},{v:-1,lbl:'-1'},
+      {v:0,lbl:'0'},
+      {v:1,lbl:'1'},{v:3,lbl:'3'},{v:5,lbl:'5'}
+    ],
+    needleColor: '#ffcc00',
+  });
+
+  document.getElementById('v-hdg').textContent =
+    'HDG: ' + String(Math.round(ac.hdg)).padStart(3, '0') + '°';
+
+  statusEl.textContent = gameOver
+    ? 'Simulacao encerrada'
+    : (isPaused
+      ? 'Simulacao pausada'
+      : 'Termicas: ' + thermals.length + ' | Lift: ' + ac.climb.toFixed(1) + ' m/s');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOOP PRINCIPAL
+// ═══════════════════════════════════════════════════════════
+let last = 0;
+
+function loop(ts) {
+  const dt = Math.min((ts - last) / 1000, 0.05); // máx 50 ms/frame
+  last = ts;
+
+  if (!gameOver && !isPaused) {
+    const turnRate = ac.bank * TURN_GAIN;
+    ac.hdg = (ac.hdg + turnRate * dt + 360) % 360;
+
+    const pps = ac.speed * 0.3;
+    const rad = (ac.hdg - 90) * Math.PI / 180;
+    ac.x += Math.cos(rad) * pps * dt;
+    ac.y += Math.sin(rad) * pps * dt;
+
+    ac.x = ((ac.x % worldW) + worldW) % worldW;
+    ac.y = ((ac.y % worldH) + worldH) % worldH;
+
+    if (config.showTrail) {
+      trail.push({ x: ac.x, y: ac.y });
+      if (trail.length > 1800) trail.shift();
+    }
+
+    const lift = thermalLiftAt(ac.x, ac.y);
+    ac.climb = lift > 0 ? lift : -1;
+    ac.alt = Math.max(0, ac.alt + ac.climb * dt);
+
+    // Atualiza rastreamento
+    session.tempoVooSeg += dt;
+    if (ac.alt > session.altitudeMax) session.altitudeMax = ac.alt;
+
+    if (ac.alt <= 0) {
+      ac.alt = 0;
+      ac.climb = 0;
+      gameOver = true;
+      enviarLog('fim_jogo');
+    }
+  }
+
+  drawMap();
+  drawCockpit();
+  updateHUD();
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTROLES
+// ═══════════════════════════════════════════════════════════
+document.getElementById('bUp').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.speed = Math.min(ac.speed + 10, MAX_SPEED);
+});
+document.getElementById('bLeft').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.bank = Math.max(-MAX_BANK, ac.bank - 5);
+});
+document.getElementById('bRight').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.bank = Math.min(MAX_BANK, ac.bank + 5);
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'p' || e.key === 'P') {
+    if (gameOver) return;
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? 'Retomar' : 'Pause';
+    return;
+  }
+
+  if (gameOver || isPaused) return;
+  switch (e.key) {
+    case 'ArrowUp':
+      e.preventDefault();
+      ac.speed = Math.min(ac.speed + 10, MAX_SPEED);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      ac.speed = Math.max(ac.speed - 10, MIN_SPEED);
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      ac.bank = Math.max(-MAX_BANK, ac.bank - 5);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      ac.bank = Math.min(MAX_BANK, ac.bank + 5);
+      break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════
+syncPanelFromConfig();
+cfgMapSatelliteEl.disabled = !config.useGoogleMap;
+cfgMapQueryEl.disabled = !config.useGoogleMap;
+cfgMapZoomEl.disabled = !config.useGoogleMap;
+setupMapBackground();
+resize();
+ac.x = worldW / 2;
+ac.y = worldH / 2;
+ac.alt = config.initialAltitudeM;
+session.altitudeMax = config.initialAltitudeM;
+
+// Envia log ao sair/fechar a aba
+window.addEventListener('pagehide', () => { enviarLog('saida'); });
+window.addEventListener('beforeunload', () => { enviarLog('saida'); });
+
+initLgpd();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
