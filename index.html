@@ -21,7 +21,7 @@
       width: 1100px;
       height: 660px;
       grid-template-columns: 58% 42%;
-      grid-template-rows: 48% 52%;
+      grid-template-rows: 20% 80%;
       border: 2px solid #444;
     }
 
@@ -71,8 +71,8 @@
       background: #080814;
       display: flex;
       flex-direction: column;
-      padding: 12px 16px 14px;
-      gap: 8px;
+      padding: 6px 6px 8px;
+      gap: 5px;
       position: relative;
     }
 
@@ -95,8 +95,8 @@
     /* Instruments strip */
     .instr-row {
       display: flex;
-      gap: 4px;
-      margin-top: 4px;
+      gap: 3px;
+      margin-top: 2px;
       justify-content: center;
     }
 
@@ -108,7 +108,7 @@
       border: 1px solid #334;
       background: #101022;
       padding: 5px;
-      margin-top: 24px;
+      margin-top: 6px;
     }
 
     .cfg-panel summary {
@@ -238,6 +238,28 @@
       margin-top: -4px;
     }
 
+    .help-link-wrap {
+      text-align: right;
+      margin-top: 2px;
+    }
+
+    .help-link {
+      display: inline-block;
+      border: 1px solid #3a5e7c;
+      background: #101a2a;
+      color: #9fd7ff;
+      text-decoration: none;
+      font-size: 10px;
+      padding: 2px 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .help-link:hover {
+      background: #17314a;
+      color: #d6efff;
+    }
+
     .game-status {
       color: #ffce00;
       font-size: 11px;
@@ -332,6 +354,12 @@
         <label for="cfg-thermals">Maximo de termicas</label>
         <input id="cfg-thermals" type="number" min="1" max="30" step="1" value="8" />
 
+        <label for="cfg-sink">Razao de descida fora termica (m/s)</label>
+        <input id="cfg-sink" type="number" min="0.1" max="10" step="0.1" value="1" />
+
+        <label for="cfg-thermal-refresh">Intervalo de recriacao das termicas (s)</label>
+        <input id="cfg-thermal-refresh" type="number" min="10" max="600" step="5" value="120" />
+
         <label for="cfg-show-thermals">Mostrar termicas</label>
         <input id="cfg-show-thermals" type="checkbox" checked />
 
@@ -350,8 +378,8 @@
         <label for="cfg-map-zoom">Zoom do mapa</label>
         <input id="cfg-map-zoom" type="number" min="1" max="20" step="1" value="13" />
 
-        <label class="cfg-span-all" for="cfg-script-url">URL Apps Script (log)</label>
-        <input class="cfg-span-all" id="cfg-script-url" type="text" placeholder="https://script.google.com/macros/s/..." />
+        <label class="cfg-span-all" for="cfg-script-url">URL de log (PHP ou Apps Script)</label>
+        <input class="cfg-span-all" id="cfg-script-url" type="text" placeholder="https://seu-servidor.com/log.php ou https://script.google.com/macros/s/..." />
       </div>
       <div class="cfg-actions">
         <button class="cfg-btn" id="cfg-apply" type="button">Aplicar</button>
@@ -359,22 +387,26 @@
       </div>
     </details>
     <div class="instr-row">
-      <canvas id="g-speed"  width="118" height="118"></canvas>
-      <canvas id="g-alt"    width="118" height="118"></canvas>
-      <canvas id="g-climb"  width="118" height="118"></canvas>
+      <canvas id="g-speed"  width="148" height="148"></canvas>
+      <canvas id="g-alt"    width="148" height="148"></canvas>
+      <canvas id="g-climb"  width="148" height="148"></canvas>
     </div>
     <div class="hdg-line" id="v-hdg">HDG: 000°</div>
     <div class="game-status" id="v-status"></div>
     <div class="ctrl-row">
       <button class="btn" id="bLeft"  title="Curvar Esquerda 5°">&#8592;</button>
       <button class="btn" id="bUp"    title="Aumentar Velocidade">&#8593;</button>
+      <button class="btn" id="bDown"  title="Reduzir Velocidade">&#8595;</button>
       <button class="btn" id="bRight" title="Curvar Direita 5°">&#8594;</button>
     </div>
     <div class="sim-actions">
       <button class="sim-btn" id="bPause" type="button">Pause</button>
       <button class="sim-btn" id="bResetSim" type="button">Reset</button>
     </div>
-    <div class="hint">Teclado: ← ↑ → (↓ reduz velocidade). Curvas: 5° por clique.</div>
+    <div class="hint">Teclado: ← ↑ → (↓ reduz velocidade), P pausa, H ajuda.</div>
+    <div class="help-link-wrap">
+      <a class="help-link" href="ajuda.html" target="_blank" rel="noopener noreferrer">Ajuda / Manual</a>
+    </div>
   </div>
 
   <div id="copyright">
@@ -390,6 +422,8 @@
 let config = {
   initialAltitudeM: 600,
   maxThermals: 8,
+  sinkRateMps: 1,
+  thermalRefreshSec: 120,
   showThermals: true,
   showTrail: true,
   useGoogleMap: false,
@@ -412,7 +446,7 @@ const ac = {
   x: 320,
   y: 320,
   hdg: 0,
-  speed: 120,
+  speed: 90,
   alt: config.initialAltitudeM,
   climb: 0,
   bank: 0,
@@ -429,6 +463,7 @@ let thermals = [];
 let trail = [];
 let gameOver = false;
 let isPaused = false;
+let thermalRefreshElapsedSec = 0;
 
 const cMap = document.getElementById('cMap');
 const ctxM = cMap.getContext('2d');
@@ -437,6 +472,8 @@ const ctxC = cCockpit.getContext('2d');
 const statusEl = document.getElementById('v-status');
 const cfgAltEl = document.getElementById('cfg-alt');
 const cfgThermalsEl = document.getElementById('cfg-thermals');
+const cfgSinkEl = document.getElementById('cfg-sink');
+const cfgThermalRefreshEl = document.getElementById('cfg-thermal-refresh');
 const cfgShowThermalsEl = document.getElementById('cfg-show-thermals');
 const cfgShowTrailEl = document.getElementById('cfg-show-trail');
 const cfgGmapEl = document.getElementById('cfg-gmap');
@@ -459,6 +496,8 @@ function readConfigFromPanel() {
   return {
     initialAltitudeM: parseNumber(cfgAltEl.value, 600, 100, 5000),
     maxThermals: parseNumber(cfgThermalsEl.value, 8, 1, 30),
+    sinkRateMps: parseNumber(cfgSinkEl.value, 1, 0.1, 10),
+    thermalRefreshSec: parseNumber(cfgThermalRefreshEl.value, 120, 10, 600),
     showThermals: cfgShowThermalsEl.checked,
     showTrail: cfgShowTrailEl.checked,
     useGoogleMap: cfgGmapEl.checked,
@@ -472,6 +511,8 @@ function readConfigFromPanel() {
 function syncPanelFromConfig() {
   cfgAltEl.value = String(config.initialAltitudeM);
   cfgThermalsEl.value = String(config.maxThermals);
+  cfgSinkEl.value = String(config.sinkRateMps);
+  cfgThermalRefreshEl.value = String(config.thermalRefreshSec);
   cfgShowThermalsEl.checked = config.showThermals;
   cfgShowTrailEl.checked = config.showTrail;
   cfgGmapEl.checked = config.useGoogleMap;
@@ -485,13 +526,14 @@ function applyConfig(shouldResetFlight) {
   config = readConfigFromPanel();
   setupMapBackground();
   generateThermals();
+  thermalRefreshElapsedSec = 0;
 
   if (shouldResetFlight) {
     ac.x = worldW / 2;
     ac.y = worldH / 2;
     ac.hdg = 0;
     ac.bank = 0;
-    ac.speed = 120;
+    ac.speed = 90;
     ac.alt = config.initialAltitudeM;
     ac.climb = 0;
     gameOver = false;
@@ -563,7 +605,7 @@ function detectarSO() {
 function enviarLog(evento) {
   if (!session.consentido) return;
   const url = config.scriptUrl || cfgScriptUrlEl.value.trim();
-  if (!url || !url.startsWith('https://script.google.com/')) return;
+  if (!url) return;
 
   const agora = Date.now();
   const payload = {
@@ -574,7 +616,7 @@ function enviarLog(evento) {
     duracao_seg:   Math.round((agora - session.inicio) / 1000),
     tempo_voo_seg: Math.round(session.tempoVooSeg),
     altitude_max:  Math.round(session.altitudeMax),
-    ip_anon:       '',    // preenchido assincronamente se disponível
+    ip_anon:       '',
     consentimento: 'sim',
   };
 
@@ -587,12 +629,15 @@ function enviarLog(evento) {
     })
     .catch(() => {})
     .finally(() => {
-      fetch(url, {
+      const options = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-        mode: 'no-cors',
-      }).catch(() => {});
+      };
+      if (url.includes('script.google.com')) {
+        options.mode = 'no-cors';
+      }
+      fetch(url, options).catch(() => {});
     });
 }
 
@@ -645,6 +690,10 @@ resetSimBtn.addEventListener('click', () => {
   resetSimulation();
 });
 
+cfgShowThermalsEl.addEventListener('change', () => {
+  config.showThermals = cfgShowThermalsEl.checked;
+});
+
 cfgGmapEl.addEventListener('change', () => {
   const enabled = cfgGmapEl.checked;
   cfgMapSatelliteEl.disabled = !enabled;
@@ -667,10 +716,24 @@ function generateThermals() {
   for (let i = 0; i < count; i++) {
     const d = random(minDiameter, maxDiameter);
     const r = d / 2;
+    const showMarker = Math.random() < 0.5;
+    const markerType = showMarker ? (Math.random() < 0.5 ? 'cloud' : 'vultures') : null;
+    
+    let vulture_ox = 0, vulture_oy = 0;
+    if (markerType === 'vultures') {
+      const ang = Math.random() * Math.PI * 2;
+      const dist = random(r * 0.15, r * 0.55);
+      vulture_ox = Math.cos(ang) * dist;
+      vulture_oy = Math.sin(ang) * dist;
+    }
+    
     thermals.push({
       x: random(r + 4, worldW - r - 4),
       y: random(r + 4, worldH - r - 4),
       r,
+      markerType,
+      vulture_ox,
+      vulture_oy,
     });
   }
 }
@@ -699,7 +762,7 @@ function drawMap() {
   ctxM.clearRect(0, 0, W, H);
 
   if (!config.useGoogleMap) {
-    ctxM.fillStyle = '#0e2238';
+    ctxM.fillStyle = '#87CEEB';
     ctxM.fillRect(0, 0, W, H);
   }
 
@@ -734,6 +797,7 @@ function drawMap() {
   if (config.showThermals) {
     drawThermals();
   }
+  drawThermalMarkers();
 
   drawPlane(ctxM, ac.x, ac.y, ac.hdg, 0.5);
   drawCompass(ctxM, 46, H - 46, ac.hdg);
@@ -800,14 +864,105 @@ function drawThermals() {
   }
 }
 
+function drawThermalMarkers() {
+  for (let i = 0; i < thermals.length; i++) {
+    const t = thermals[i];
+    if (t.markerType === 'cloud') {
+      drawCloudMarker(t.x, t.y, t.r);
+    } else if (t.markerType === 'vultures') {
+      drawVultureMarker(t.x, t.y, t.r, t.vulture_ox, t.vulture_oy);
+    }
+  }
+}
+
+function drawCloudMarker(x, y, r) {
+  const s = Math.max(14, r * 0.34);
+
+  ctxM.save();
+  ctxM.translate(x, y - r * 0.2);
+
+  ctxM.fillStyle = 'rgba(255,255,255,0.78)';
+  ctxM.beginPath();
+  ctxM.arc(-s * 0.42, 0, s * 0.34, 0, Math.PI * 2);
+  ctxM.arc(0, -s * 0.12, s * 0.45, 0, Math.PI * 2);
+  ctxM.arc(s * 0.44, 0, s * 0.3, 0, Math.PI * 2);
+  ctxM.fill();
+
+  ctxM.strokeStyle = 'rgba(210,230,255,0.9)';
+  ctxM.lineWidth = 1;
+  ctxM.beginPath();
+  ctxM.arc(-s * 0.42, 0, s * 0.34, 0, Math.PI * 2);
+  ctxM.arc(0, -s * 0.12, s * 0.45, 0, Math.PI * 2);
+  ctxM.arc(s * 0.44, 0, s * 0.3, 0, Math.PI * 2);
+  ctxM.stroke();
+
+  ctxM.restore();
+}
+
+function drawVultureMarker(x, y, r, orbitCx, orbitCy) {
+  const orbit = Math.max(10, r * 0.26);
+  const birdR = Math.max(3, r * 0.08);
+  const base = performance.now() * 0.0012;
+
+  ctxM.save();
+  ctxM.translate(x, y);
+  ctxM.translate(orbitCx || 0, orbitCy || 0);
+
+  for (let i = 0; i < 3; i++) {
+    const a = base + i * (Math.PI * 2 / 3);
+    const bx = Math.cos(a) * orbit;
+    const by = Math.sin(a) * orbit;
+
+    ctxM.save();
+    ctxM.translate(bx, by);
+    ctxM.rotate(a + Math.PI / 2);
+
+    ctxM.strokeStyle = 'rgba(25,25,25,0.95)';
+    ctxM.lineWidth = 1.5;
+    ctxM.beginPath();
+    ctxM.moveTo(-birdR, 0);
+    ctxM.quadraticCurveTo(0, -birdR * 0.95, birdR, 0);
+    ctxM.stroke();
+
+    ctxM.restore();
+  }
+
+  ctxM.strokeStyle = 'rgba(255,255,255,0.22)';
+  ctxM.lineWidth = 1;
+  ctxM.beginPath();
+  ctxM.arc(0, 0, orbit, 0, Math.PI * 2);
+  ctxM.stroke();
+
+  ctxM.restore();
+}
+
 function drawPlane(ctx, x, y, hdg, scale) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
   ctx.rotate(hdg * Math.PI / 180);
 
-  ctx.strokeStyle = '#ffe900';
-  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(0, 14);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(-6, -5);
+  ctx.lineTo(6, -5);
+  ctx.lineTo(22, 0);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-10, 14);
+  ctx.lineTo(10, 14);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(0, -18);
   ctx.lineTo(0, 14);
@@ -1246,8 +1401,14 @@ function loop(ts) {
     }
 
     const lift = thermalLiftAt(ac.x, ac.y);
-    ac.climb = lift > 0 ? lift : -1;
+    ac.climb = lift > 0 ? lift : -config.sinkRateMps;
     ac.alt = Math.max(0, ac.alt + ac.climb * dt);
+
+    thermalRefreshElapsedSec += dt;
+    if (thermalRefreshElapsedSec >= config.thermalRefreshSec) {
+      generateThermals();
+      thermalRefreshElapsedSec = 0;
+    }
 
     // Atualiza rastreamento
     session.tempoVooSeg += dt;
@@ -1275,6 +1436,10 @@ document.getElementById('bUp').addEventListener('click', () => {
   if (gameOver || isPaused) return;
   ac.speed = Math.min(ac.speed + 10, MAX_SPEED);
 });
+document.getElementById('bDown').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.speed = Math.max(ac.speed - 10, MIN_SPEED);
+});
 document.getElementById('bLeft').addEventListener('click', () => {
   if (gameOver || isPaused) return;
   ac.bank = Math.max(-MAX_BANK, ac.bank - 5);
@@ -1289,6 +1454,12 @@ document.addEventListener('keydown', e => {
     if (gameOver) return;
     isPaused = !isPaused;
     pauseBtn.textContent = isPaused ? 'Retomar' : 'Pause';
+    return;
+  }
+
+  if (e.key === 'h' || e.key === 'H') {
+    e.preventDefault();
+    window.open('ajuda.html', '_blank', 'noopener');
     return;
   }
 

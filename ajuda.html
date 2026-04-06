@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ajuda - Flight Simulator</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Courier New', Courier, monospace;
+      background: linear-gradient(135deg, #0c1624 0%, #111b2d 60%, #0a111c 100%);
+      color: #d8e7ff;
+      line-height: 1.55;
+      padding: 28px 18px;
+    }
+    .wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      border: 1px solid #28415f;
+      background: rgba(8, 15, 28, 0.92);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      padding: 22px 20px;
+    }
+    h1, h2 {
+      margin: 0 0 10px;
+      color: #7fc9ff;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    h1 { font-size: 22px; }
+    h2 {
+      font-size: 16px;
+      margin-top: 22px;
+      border-bottom: 1px solid #28415f;
+      padding-bottom: 6px;
+    }
+    p { margin: 0 0 10px; }
+    ul, ol {
+      margin: 8px 0 12px;
+      padding-left: 24px;
+    }
+    li { margin: 4px 0; }
+    .card {
+      border: 1px solid #1e334a;
+      background: rgba(9, 22, 38, 0.75);
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .small { color: #9bb3d1; font-size: 13px; }
+    a { color: #8fd4ff; }
+    .contact {
+      border: 1px solid #356083;
+      background: rgba(15, 35, 55, 0.8);
+      padding: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Ajuda / Manual do Jogo</h1>
+    <p class="small">Flight Simulator - Simulador de Voo com t&eacute;rmicas</p>
+
+    <h2>Objetivo do Jogo</h2>
+    <p>
+      O objetivo &eacute; manter a aeronave voando pelo maior tempo poss&iacute;vel, aproveitando as t&eacute;rmicas
+      para ganhar altitude e evitando chegar ao solo (0 m).
+    </p>
+
+    <h2>Como o Jogo Funciona</h2>
+    <div class="card">
+      <p><strong>Se&ccedil;&atilde;o A (Mapa):</strong> mostra a aeronave, trajet&oacute;ria e t&eacute;rmicas (quando habilitadas).</p>
+      <p><strong>Se&ccedil;&atilde;o B (Cockpit):</strong> horizonte artificial e dados de atitude/rumo.</p>
+      <p><strong>Se&ccedil;&atilde;o C (Instrumentos):</strong> veloc&iacute;metro, alt&iacute;metro, vari&ocirc;metro e controles.</p>
+      <p>
+        As t&eacute;rmicas s&atilde;o zonas circulares que aumentam a taxa de subida. Fora delas, a aeronave tende
+        a perder altitude gradualmente.
+      </p>
+      <p>
+        Durante a simula&ccedil;&atilde;o, as t&eacute;rmicas s&atilde;o recriadas automaticamente em novos locais,
+        conforme o intervalo configurado pelo usu&aacute;rio.
+      </p>
+      <p>
+        Em cerca de <strong>50% das t&eacute;rmicas</strong>, aparecem indicadores visuais sobre o c&iacute;rculo:
+        <strong>nuvens c&uacute;mulus</strong> (vista superior) ou um grupo de <strong>3 urubus</strong>
+        voando em c&iacute;rculo.
+      </p>
+    </div>
+
+    <h2>Manual de Uso</h2>
+    <ol>
+      <li>Abra o simulador no navegador.</li>
+      <li>Use os controles para pilotar:</li>
+    </ol>
+    <ul>
+      <li><strong>&larr;</strong> Curva 5&deg; para a esquerda.</li>
+      <li><strong>&rarr;</strong> Curva 5&deg; para a direita.</li>
+      <li><strong>&uarr;</strong> Aumenta a velocidade.</li>
+      <li><strong>&darr;</strong> Reduz a velocidade.</li>
+      <li><strong>P</strong> Pausa/retoma simula&ccedil;&atilde;o.</li>
+    </ul>
+
+    <ol start="3">
+      <li>Observe os instrumentos:</li>
+    </ol>
+    <ul>
+      <li><strong>Veloc&iacute;metro:</strong> velocidade atual.</li>
+      <li><strong>Alt&iacute;metro:</strong> altitude da aeronave em metros.</li>
+      <li><strong>Vari&ocirc;metro:</strong> taxa de subida/descida (m/s).</li>
+    </ul>
+
+    <ol start="4">
+      <li>
+        Em <strong>Configura&ccedil;&atilde;o da simula&ccedil;&atilde;o</strong>, ajuste altitude inicial, n&uacute;mero de t&eacute;rmicas,
+        <strong>raz&atilde;o de descida fora de t&eacute;rmica (m/s)</strong>,
+        <strong>intervalo de recria&ccedil;&atilde;o das t&eacute;rmicas (s)</strong>, visualiza&ccedil;&atilde;o de trilha,
+        mapa Google e URL de log (Apps Script).
+      </li>
+      <li>
+        A raz&atilde;o de descida define a perda de altitude quando a aeronave est&aacute; fora das t&eacute;rmicas.
+        Valor maior = perda mais r&aacute;pida de altitude. Valor menor = planeio mais eficiente.
+      </li>
+      <li>
+        Faixa recomendada: <strong>0,1 a 10,0 m/s</strong>. O valor padr&atilde;o &eacute; <strong>1,0 m/s</strong>.
+      </li>
+      <li>
+        O intervalo de recria&ccedil;&atilde;o define de quantos em quantos segundos as t&eacute;rmicas mudam de lugar.
+        Valor padr&atilde;o: <strong>120 s</strong> (2 minutos). Faixa dispon&iacute;vel: <strong>10 a 600 s</strong>.
+      </li>
+      <li>
+        Clique em <strong>Aplicar</strong> para usar as configura&ccedil;&otilde;es atuais e em <strong>Reiniciar</strong>
+        para come&ccedil;ar uma nova sess&atilde;o.
+      </li>
+      <li>Se a altitude chegar a 0 m, o voo termina.</li>
+    </ol>
+
+    <h2>Dicas R&aacute;pidas</h2>
+    <ul>
+      <li>Mantenha curvas suaves para n&atilde;o perder efici&ecirc;ncia.</li>
+      <li>Procure e permane&ccedil;a nas t&eacute;rmicas para recuperar altitude.</li>
+      <li>Nuvens c&uacute;mulus e urubus em c&iacute;rculo s&atilde;o pistas visuais de t&eacute;rmica na Se&ccedil;&atilde;o A.</li>
+      <li>Controle a velocidade para evitar extremos de voo lento ou r&aacute;pido demais.</li>
+    </ul>
+
+    <h2>Contato</h2>
+    <div class="contact">
+      <p><strong>Respons&aacute;vel:</strong> L. Cavamura Jr.</p>
+      <p><strong>E-mail:</strong> <a href="mailto:lcavamura@gmail.com">lcavamura@gmail.com</a></p>
+    </div>
+  </div>
+</body>
+</html>
