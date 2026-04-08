@@ -14,12 +14,13 @@
       align-items: center;
       min-height: 100vh;
       font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
     }
 
     #sim {
       display: grid;
-      width: 1100px;
-      height: 660px;
+      width: min(1100px, 100vw);
+      height: min(660px, 100vh);
       grid-template-columns: 58% 42%;
       grid-template-rows: 20% 80%;
       border: 2px solid #444;
@@ -179,6 +180,153 @@
       }
     }
 
+    @media (max-width: 900px) {
+      body {
+        align-items: stretch;
+      }
+
+      #lgpd-banner {
+        padding: 10px 12px;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      #lgpd-banner p {
+        min-width: 100%;
+      }
+
+      #sim {
+        width: 100vw;
+        height: 100dvh;
+        border: 0;
+        grid-template-columns: 1fr;
+        grid-template-rows: 42% 22% 36%;
+      }
+
+      #sec-a {
+        grid-column: 1;
+        grid-row: 1;
+        border-right: 0;
+        border-bottom: 3px solid #00aaff;
+      }
+
+      #sec-b {
+        grid-column: 1;
+        grid-row: 2;
+        border-bottom: 3px solid #00aaff;
+      }
+
+      #sec-c {
+        grid-column: 1;
+        grid-row: 3;
+        overflow-y: auto;
+        padding-bottom: 10px;
+      }
+
+      .instr-row {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .instr-row canvas {
+        width: min(31vw, 132px);
+        height: min(31vw, 132px);
+      }
+
+      .ctrl-row,
+      .sim-actions,
+      .hdg-line,
+      .game-status,
+      .hint,
+      .help-link-wrap {
+        text-align: center;
+        justify-content: center;
+      }
+
+      .btn {
+        width: 54px;
+        height: 54px;
+        font-size: 24px;
+      }
+
+      #copyright {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      #sim {
+        grid-template-columns: 60% 40%;
+        grid-template-rows: 34% 66%;
+      }
+
+      #sec-a {
+        grid-column: 1;
+        grid-row: 1 / 3;
+        border-right: 3px solid #00aaff;
+        border-bottom: 0;
+      }
+
+      #sec-b {
+        grid-column: 2;
+        grid-row: 1;
+      }
+
+      #sec-c {
+        grid-column: 2;
+        grid-row: 2;
+        overflow-y: auto;
+      }
+
+      .cfg-panel {
+        margin-top: 0;
+        padding: 4px;
+      }
+
+      .cfg-panel summary {
+        font-size: 9px;
+      }
+
+      .instr-row {
+        flex-wrap: nowrap;
+        gap: 4px;
+      }
+
+      .instr-row canvas {
+        width: min(12.4vw, 104px);
+        height: min(12.4vw, 104px);
+      }
+
+      .btn {
+        width: 46px;
+        height: 46px;
+        font-size: 20px;
+      }
+
+      .sim-btn {
+        font-size: 9px;
+        padding: 2px 6px;
+      }
+
+      .hint {
+        font-size: 9px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .instr-row canvas {
+        width: min(30vw, 112px);
+        height: min(30vw, 112px);
+      }
+
+      .btn {
+        width: 50px;
+        height: 50px;
+        font-size: 22px;
+      }
+    }
+
     /* Heading readout */
     .hdg-line {
       color: #00aaff;
@@ -226,6 +374,7 @@
       display: flex; align-items: center; justify-content: center;
       user-select: none;
       transition: background .1s;
+      touch-action: manipulation;
     }
     .btn:hover  { background: rgba(0,204,85,.12); }
     .btn:active { background: rgba(0,204,85,.28); }
@@ -311,6 +460,73 @@
       color: #888;
     }
     .lgpd-btn:hover { opacity: 0.85; }
+
+    /* ── Joystick Virtual ── */
+    #joystick-wrap {
+      position: absolute;
+      bottom: 18px;
+      left: 18px;
+      z-index: 50;
+      user-select: none;
+    }
+
+    #joystick-base {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: rgba(0, 204, 85, 0.10);
+      border: 2px solid rgba(0, 204, 85, 0.55);
+      position: relative;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #joystick-knob {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: rgba(0, 204, 85, 0.50);
+      border: 2px solid #00cc55;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      transition: transform 0.04s;
+      box-shadow: 0 0 8px rgba(0,204,85,0.45);
+    }
+
+    #joystick-label {
+      text-align: center;
+      margin-top: 4px;
+      color: rgba(0,204,85,0.55);
+      font-size: 9px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      #joystick-wrap {
+        bottom: 12px;
+        left: 12px;
+      }
+      #joystick-base {
+        width: 90px;
+        height: 90px;
+      }
+      #joystick-knob {
+        width: 38px;
+        height: 38px;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: portrait) {
+      #joystick-wrap {
+        bottom: 12px;
+        left: 12px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -334,6 +550,13 @@
     <div class="slbl">A</div>
     <div id="map-bg"><iframe id="gmFrame" title="Mapa"></iframe></div>
     <canvas id="cMap"></canvas>
+    <!-- ══ Joystick Virtual ══ -->
+    <div id="joystick-wrap">
+      <div id="joystick-base">
+        <div id="joystick-knob"></div>
+      </div>
+      <div id="joystick-label">joystick</div>
+    </div>
   </div>
 
   <!-- ══ B : Cockpit / Artificial Horizon ══ -->
@@ -355,7 +578,7 @@
         <input id="cfg-thermals" type="number" min="1" max="30" step="1" value="8" />
 
         <label for="cfg-sink">Razao de descida fora termica (m/s)</label>
-        <input id="cfg-sink" type="number" min="0.1" max="10" step="0.1" value="1" />
+        <input id="cfg-sink" type="number" min="0.1" max="10" step="0.1" value="5" />
 
         <label for="cfg-thermal-refresh">Intervalo de recriacao das termicas (s)</label>
         <input id="cfg-thermal-refresh" type="number" min="10" max="600" step="5" value="120" />
@@ -394,10 +617,10 @@
     <div class="hdg-line" id="v-hdg">HDG: 000°</div>
     <div class="game-status" id="v-status"></div>
     <div class="ctrl-row">
-      <button class="btn" id="bLeft"  title="Curvar Esquerda 5°">&#8592;</button>
+      <button class="btn" id="bLeft"  title="Curvar Esquerda 15°">&#8592;</button>
       <button class="btn" id="bUp"    title="Aumentar Velocidade">&#8593;</button>
       <button class="btn" id="bDown"  title="Reduzir Velocidade">&#8595;</button>
-      <button class="btn" id="bRight" title="Curvar Direita 5°">&#8594;</button>
+      <button class="btn" id="bRight" title="Curvar Direita 15°">&#8594;</button>
     </div>
     <div class="sim-actions">
       <button class="sim-btn" id="bPause" type="button">Pause</button>
@@ -422,7 +645,7 @@
 let config = {
   initialAltitudeM: 600,
   maxThermals: 8,
-  sinkRateMps: 1,
+  sinkRateMps: 5,
   thermalRefreshSec: 120,
   showThermals: true,
   showTrail: true,
@@ -452,7 +675,7 @@ const ac = {
   bank: 0,
 };
 
-const MIN_SPEED = 60;
+const MIN_SPEED = 45;
 const MAX_SPEED = 400;
 const MAX_BANK = 70;
 const TURN_GAIN = 0.45;
@@ -496,7 +719,7 @@ function readConfigFromPanel() {
   return {
     initialAltitudeM: parseNumber(cfgAltEl.value, 600, 100, 5000),
     maxThermals: parseNumber(cfgThermalsEl.value, 8, 1, 30),
-    sinkRateMps: parseNumber(cfgSinkEl.value, 1, 0.1, 10),
+    sinkRateMps: parseNumber(cfgSinkEl.value, 5, 0.1, 10),
     thermalRefreshSec: parseNumber(cfgThermalRefreshEl.value, 120, 10, 600),
     showThermals: cfgShowThermalsEl.checked,
     showTrail: cfgShowTrailEl.checked,
@@ -1384,6 +1607,12 @@ function loop(ts) {
   last = ts;
 
   if (!gameOver && !isPaused) {
+    // Aplicar joystick virtual continuamente
+    if (joystick.active) {
+      ac.bank  = Math.max(-MAX_BANK, Math.min(MAX_BANK, ac.bank + joystick.dx * 60 * dt));
+      ac.speed = Math.max(MIN_SPEED,  Math.min(MAX_SPEED, ac.speed - joystick.dy * 40 * dt));
+    }
+
     const turnRate = ac.bank * TURN_GAIN;
     ac.hdg = (ac.hdg + turnRate * dt + 360) % 360;
 
@@ -1442,11 +1671,73 @@ document.getElementById('bDown').addEventListener('click', () => {
 });
 document.getElementById('bLeft').addEventListener('click', () => {
   if (gameOver || isPaused) return;
-  ac.bank = Math.max(-MAX_BANK, ac.bank - 5);
+  ac.bank = Math.max(-MAX_BANK, ac.bank - 15);
 });
 document.getElementById('bRight').addEventListener('click', () => {
   if (gameOver || isPaused) return;
-  ac.bank = Math.min(MAX_BANK, ac.bank + 5);
+  ac.bank = Math.min(MAX_BANK, ac.bank + 15);
+});
+
+// ═══════════════════════════════════════════════════════════
+//  JOYSTICK VIRTUAL
+// ═══════════════════════════════════════════════════════════
+const joystickBase = document.getElementById('joystick-base');
+const joystickKnob = document.getElementById('joystick-knob');
+
+const joystick = { active: false, dx: 0, dy: 0 };
+
+function joystickUpdate(clientX, clientY) {
+  const rect = joystickBase.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  let dx = clientX - cx;
+  let dy = clientY - cy;
+  const maxDist = rect.width / 2 - 6;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > maxDist) {
+    dx = dx / dist * maxDist;
+    dy = dy / dist * maxDist;
+  }
+  joystick.dx = dx / maxDist;  // -1 (esq) … +1 (dir)
+  joystick.dy = dy / maxDist;  // -1 (cima) … +1 (baixo)
+  joystickKnob.style.transform =
+    `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px))`;
+}
+
+function joystickReset() {
+  joystick.active = false;
+  joystick.dx = 0;
+  joystick.dy = 0;
+  joystickKnob.style.transform = 'translate(-50%, -50%)';
+}
+
+// Touch
+joystickBase.addEventListener('touchstart', e => {
+  e.preventDefault();
+  joystick.active = true;
+  joystickUpdate(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+joystickBase.addEventListener('touchmove', e => {
+  e.preventDefault();
+  joystickUpdate(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive: false });
+
+joystickBase.addEventListener('touchend',   e => { e.preventDefault(); joystickReset(); }, { passive: false });
+joystickBase.addEventListener('touchcancel', e => { e.preventDefault(); joystickReset(); }, { passive: false });
+
+// Mouse (para teste no desktop)
+joystickBase.addEventListener('mousedown', e => {
+  joystick.active = true;
+  joystickUpdate(e.clientX, e.clientY);
+  const onMove = ev => joystickUpdate(ev.clientX, ev.clientY);
+  const onUp   = () => {
+    joystickReset();
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+  };
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
 });
 
 document.addEventListener('keydown', e => {

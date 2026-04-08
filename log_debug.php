@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 $db_host = 'localhost';
+$db_port = '5432';
 $db_user = 'lcvmcom_simulador';
 $db_pass = '#Sim1508#2';
 $db_name = 'lcvmcom_simulador';
@@ -31,12 +32,12 @@ function info($msg) { echo "<p style='color:#aaa'>ℹ $msg</p>"; }
 <h1>Diagnóstico — Flight Simulator Log</h1>
 
 <div class="box">
-<h2>1. Extensão MySQLi</h2>
+<h2>1. Extensão PostgreSQL (pgsql)</h2>
 <?php
-if (extension_loaded('mysqli')) {
-    ok('MySQLi está disponível.');
+if (extension_loaded('pgsql')) {
+    ok('Extensão pgsql está disponível.');
 } else {
-    fail('ERRO: extensão MySQLi NÃO está carregada. Habilite mysqli no php.ini.');
+    fail('ERRO: extensão pgsql NÃO está carregada. Habilite pgsql no php.ini.');
 }
 ?>
 </div>
@@ -44,44 +45,49 @@ if (extension_loaded('mysqli')) {
 <div class="box">
 <h2>2. Conexão com o Banco de Dados</h2>
 <?php
-mysqli_report(MYSQLI_REPORT_OFF);
-$conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
-if ($conn->connect_error) {
-    fail('Falha na conexão: ' . htmlspecialchars($conn->connect_error));
-    info("Host: $db_host | Usuário: $db_user | Banco: $db_name");
+$connStr = 'host=' . $db_host
+  . ' port=' . $db_port
+  . ' dbname=' . $db_name
+  . ' user=' . $db_user
+  . ' password=' . $db_pass;
+
+$conn = @pg_connect($connStr);
+if (!$conn) {
+    fail('Falha na conexão com PostgreSQL.');
+    info("Host: $db_host | Porta: $db_port | Usuário: $db_user | Banco: $db_name");
 } else {
-    ok("Conexão bem-sucedida com <strong>$db_name</strong> em <strong>$db_host</strong>");
-    $conn->set_charset('utf8mb4');
+    ok("Conexão bem-sucedida com <strong>$db_name</strong> em <strong>$db_host:$db_port</strong>");
 
     // 3. Verificar se a tabela existe
     echo '<h2 style="color:#7fc9ff;border-bottom:1px solid #333;padding-bottom:6px;margin-top:16px">3. Tabela <code>acessos</code></h2>';
-    $res = $conn->query("SHOW TABLES LIKE 'acessos'");
-    if ($res && $res->num_rows > 0) {
+    $res = @pg_query_params($conn, 'SELECT to_regclass($1) as tbl', ['public.acessos']);
+    $tbl = $res ? pg_fetch_assoc($res) : null;
+    if ($tbl && $tbl['tbl']) {
         ok('Tabela <strong>acessos</strong> encontrada.');
 
         // 4. Verificar estrutura
         echo '<h2 style="color:#7fc9ff;border-bottom:1px solid #333;padding-bottom:6px;margin-top:16px">4. Estrutura da Tabela</h2>';
-        $cols = $conn->query("DESCRIBE acessos");
+        $cols = @pg_query($conn, "SELECT column_name, data_type, is_nullable FROM information_schema.columns WHERE table_schema='public' AND table_name='acessos' ORDER BY ordinal_position");
         echo '<pre>';
         printf("%-20s %-20s %-5s\n", 'Campo', 'Tipo', 'Null');
         echo str_repeat('-', 48) . "\n";
-        while ($row = $cols->fetch_assoc()) {
-            printf("%-20s %-20s %-5s\n", $row['Field'], $row['Type'], $row['Null']);
+        while ($row = pg_fetch_assoc($cols)) {
+            printf("%-20s %-20s %-5s\n", $row['column_name'], $row['data_type'], $row['is_nullable']);
         }
         echo '</pre>';
 
         // 5. Total de registros
         echo '<h2 style="color:#7fc9ff;border-bottom:1px solid #333;padding-bottom:6px;margin-top:16px">5. Registros</h2>';
-        $cnt = $conn->query("SELECT COUNT(*) as total FROM acessos");
-        $row = $cnt->fetch_assoc();
+        $cnt = @pg_query($conn, 'SELECT COUNT(*)::bigint as total FROM acessos');
+        $row = $cnt ? pg_fetch_assoc($cnt) : ['total' => '0'];
         ok('Total de registros na tabela: <strong>' . $row['total'] . '</strong>');
 
         // Últimos 5 registros
-        $recent = $conn->query("SELECT * FROM acessos ORDER BY data_hora DESC LIMIT 5");
-        if ($recent && $recent->num_rows > 0) {
+        $recent = @pg_query($conn, 'SELECT * FROM acessos ORDER BY data_hora DESC LIMIT 5');
+        if ($recent && pg_num_rows($recent) > 0) {
             info('Últimos registros:');
             echo '<pre>';
-            while ($r = $recent->fetch_assoc()) {
+            while ($r = pg_fetch_assoc($recent)) {
                 echo htmlspecialchars(
                     $r['data_hora'] . ' | ' . $r['evento'] . ' | ' . $r['navegador'] . ' | ' . $r['so'] . ' | voo:' . $r['tempo_voo_seg'] . 's'
                 ) . "\n";
@@ -93,32 +99,27 @@ if ($conn->connect_error) {
 
         // 6. Teste de INSERT
         echo '<h2 style="color:#7fc9ff;border-bottom:1px solid #333;padding-bottom:6px;margin-top:16px">6. Teste de INSERT</h2>';
-        $q = $conn->prepare(
-            'INSERT INTO acessos (data_hora, evento, navegador, so, resolucao, duracao_seg, tempo_voo_seg, altitude_max, ip_anon, consentimento)
-             VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+        $ins = @pg_query_params(
+            $conn,
+            'INSERT INTO acessos (data_hora, evento, navegador, so, resolucao, duracao_seg, tempo_voo_seg, altitude_max, ip_anon, consentimento) VALUES (NOW(), $1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id',
+            ['debug', 'debug', 'debug', '0x0', 1, 1, 100, '0.0.0.xxx', 'sim']
         );
-        if (!$q) {
-            fail('Falha ao preparar INSERT: ' . htmlspecialchars($conn->error));
+        if ($ins) {
+            $rIns = pg_fetch_assoc($ins);
+            ok('INSERT de teste executado com sucesso (id=' . $rIns['id'] . ').');
+            // Remove o registro de teste
+            @pg_query_params($conn, 'DELETE FROM acessos WHERE evento=$1 AND navegador=$2', ['debug', 'debug']);
+            info('Registro de teste removido.');
         } else {
-            $ev='debug'; $nav='debug'; $so='debug'; $res='0x0'; $dur=1; $voo=1; $alt=100; $ip='0.0.0.xxx'; $con='sim';
-            $q->bind_param('ssssiiiss', $ev, $nav, $so, $res, $dur, $voo, $alt, $ip, $con);
-            if ($q->execute()) {
-                ok('INSERT de teste executado com sucesso (id=' . $conn->insert_id . ').');
-                // Remove o registro de teste
-                $conn->query("DELETE FROM acessos WHERE evento='debug' AND navegador='debug'");
-                info('Registro de teste removido.');
-            } else {
-                fail('Falha ao executar INSERT: ' . htmlspecialchars($q->error));
-            }
-            $q->close();
+            fail('Falha ao executar INSERT de teste.');
         }
 
     } else {
         fail('Tabela <strong>acessos</strong> NÃO encontrada no banco <strong>' . $db_name . '</strong>.');
-        info('Execute o script <code>database_setup.sql</code> no seu banco de dados MySQL.');
+        info('Execute o script <code>database_setup.sql</code> no seu banco de dados PostgreSQL.');
     }
 
-    $conn->close();
+    @pg_close($conn);
 }
 ?>
 </div>

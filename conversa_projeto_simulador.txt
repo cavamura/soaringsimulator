@@ -1,0 +1,193 @@
+TRANSCRICAO - PROJETO FLIGHT SIMULATOR
+Gerado em: 06/04/2026
+
+Observacao:
+- Este arquivo registra a conversa de desenvolvimento do projeto no chat.
+- Idioma principal: portugues (pt-BR).
+
+====================================================================
+[1] Usuario:
+Boa tarde, vamos dar continuidade no projeto do fight simulator?
+
+[1] Assistente:
+Leitura do projeto e retomada do contexto.
+
+--------------------------------------------------------------------
+[2] Usuario:
+Inicialmente, a razao de descida fora das termicas era 1 m/s, mas precisa ser parametrizada pelo usuario.
+
+[2] Assistente:
+Implementada parametrizacao da razao de descida:
+- Novo campo de configuracao no painel.
+- Novo parametro sinkRateMps.
+- Loop de voo passou de valor fixo -1 para -config.sinkRateMps.
+- Manual atualizado com a nova configuracao.
+
+--------------------------------------------------------------------
+[3] Usuario:
+ok, pode atualizar o manual
+
+[3] Assistente:
+Manual atualizado com:
+- nova opcao de razao de descida fora de termica,
+- efeito no voo,
+- faixa de valores e padrao.
+
+--------------------------------------------------------------------
+[4] Usuario:
+Nova melhoria: termicas recriadas em locais diferentes a cada 2 minutos, com valor parametrizavel; atualizar manual.
+
+[4] Assistente:
+Implementado:
+- intervalo configuravel de recriacao de termicas (segundos), padrao 120s.
+- temporizador no loop para regenerar termicas no intervalo definido.
+- manual atualizado com comportamento, faixa e valor padrao.
+
+--------------------------------------------------------------------
+[5] Usuario:
+Nova melhoria: indicadores visuais de termica com nuvens e urubus; em 50% das termicas criadas na Secao A.
+
+[5] Assistente:
+Implementado:
+- 50% das termicas recebem marcador visual.
+- marcador sorteado entre nuvem cumulus ou 3 urubus em circulo.
+- novos desenhos no canvas para ambos os marcadores.
+
+--------------------------------------------------------------------
+[6] Usuario:
+por favor, atualizar o manual
+
+[6] Assistente:
+Manual atualizado incluindo:
+- regra de 50% das termicas com marcadores,
+- nuvens/urubus como pistas visuais de termica.
+
+--------------------------------------------------------------------
+[7] Usuario:
+Problema: ao ocultar termicas, nuvens e urubus tambem somem. Nao pode acontecer.
+
+[7] Assistente:
+Correcao aplicada:
+- desenho dos circulos de termica separado do desenho dos marcadores.
+- nuvens e urubus ficam sempre visiveis, independente de mostrar/ocultar circulos.
+
+--------------------------------------------------------------------
+[8] Usuario:
+Quando desliga Google Maps, fundo escuro dificulta ver urubus pretos. Pode ser azul claro de ceu?
+
+[8] Assistente:
+Cor de fundo sem Google Maps alterada para azul claro (sky blue), melhorando contraste.
+
+--------------------------------------------------------------------
+[9] Usuario:
+O aviao amarelo perdeu visibilidade no azul. Pode trocar por cor que destaque no azul e no Google Maps?
+
+[9] Assistente:
+Aviao redesenhado com alto contraste:
+- contorno preto + traco branco,
+- ponta vermelha mantida.
+- melhor visibilidade em ambos os backgrounds.
+
+--------------------------------------------------------------------
+[10] Usuario:
+Urubus giram exatamente no centro da termica. Pode girar dentro do circulo, mas nao no centro exato?
+
+[10] Assistente:
+Implementado:
+- cada termica com urubus ganhou offset aleatorio de orbita.
+- urubus giram em ponto deslocado dentro da termica, nao mais no centro exato.
+
+--------------------------------------------------------------------
+[11] Usuario:
+Migrar coleta de dados de Google Planilhas para PHP + MySQL. Erros de conexao devem ser transparentes ao usuario.
+
+[11] Assistente:
+Implementado:
+- index.html ajustado para enviar log para endpoint PHP (ou Apps Script).
+- criado log.php para gravar no MySQL com tratamento silencioso de erro.
+- criado database_setup.sql para estrutura da tabela.
+- criado SETUP_PHP_MYSQL.md com instrucoes.
+
+--------------------------------------------------------------------
+[12] Usuario:
+Em qual arquivo configuro credenciais do banco?
+
+[12] Assistente:
+Orientacao:
+- credenciais no arquivo log.php (db_host, db_user, db_pass, db_name).
+
+--------------------------------------------------------------------
+[13] Usuario:
+ok, obrigado.
+
+[13] Assistente:
+Encerramento cordial.
+
+--------------------------------------------------------------------
+[14] Usuario:
+Melhoria: Secao B muito grande; Secao C pequena; instrumentos pequenos.
+Diminuir B e aumentar instrumentos/parametrizacoes em C sem alterar Secao A.
+
+[14] Assistente:
+Layout ajustado:
+- reducao da area da Secao B,
+- aumento da Secao C,
+- gauges ampliados,
+- espacamentos/padding ajustados para melhor leitura.
+
+--------------------------------------------------------------------
+[15] Usuario:
+Os dados nao estao sendo gravados no banco. Como verificar e resolver?
+
+[15] Assistente:
+Diagnostico e correcoes:
+- corrigido bind_param em log.php (tipo do campo ip_anon).
+- corrigida inconsistência no database_setup.sql (nome/uso de banco).
+- criado log_debug.php para teste de conexao, tabela, insert e estrutura.
+- orientacao sobre consentimento LGPD no navegador (pode bloquear envio).
+
+--------------------------------------------------------------------
+[16] Usuario:
+Ao executar log_debug.php aparece: Access denied for user ...
+
+[16] Assistente:
+Correcao tecnica + orientacao:
+- desativado comportamento de excecao automatica do mysqli no PHP 8 para tratamento controlado.
+- instruido a conceder privilegios do usuario MySQL ao banco no cPanel.
+
+--------------------------------------------------------------------
+[17] Usuario:
+Consegue aumentar mais a visualizacao dos instrumentos? Se preciso, diminuir Secao B.
+
+[17] Assistente:
+Novo ajuste de layout:
+- Secao B reduzida ainda mais,
+- Secao C ampliada,
+- instrumentos aumentados novamente,
+- margens e paddings refinados para caber sem overflow.
+
+--------------------------------------------------------------------
+[18] Usuario:
+ok
+
+[18] Assistente:
+Encerramento cordial.
+
+--------------------------------------------------------------------
+[19] Usuario:
+Bom dia! consegue exportar toda nossa interacao (conversa) do projeto simulador em um arquivo texto?
+
+[19] Assistente:
+Arquivo exportado com a transcricao da conversa.
+
+====================================================================
+ARQUIVOS CITADOS DURANTE O PROJETO
+- index.html
+- ajuda.html
+- apps-script.gs
+- log.php
+- database_setup.sql
+- log_debug.php
+- SETUP_PHP_MYSQL.md
+
+FIM

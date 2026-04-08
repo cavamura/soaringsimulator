@@ -1,0 +1,132 @@
+TRANSCRICAO DETALHADA - PROJETO FLIGHT SIMULATOR
+Gerado em: 06/04/2026
+
+FORMATO
+- Registro cronologico por etapa
+- Foco em pedidos, solucoes aplicadas e arquivos impactados
+
+ETAPA 01
+Data: 05/04/2026
+Pedido: continuidade do projeto
+Acao: leitura do contexto e retomada dos arquivos
+Arquivos: index.html, apps-script.gs
+
+ETAPA 02
+Data: 05/04/2026
+Pedido: parametrizar razao de descida fora de termica
+Acao:
+- adicionado parametro sinkRateMps
+- adicionado campo no painel de configuracao
+- loop alterado de valor fixo para valor configuravel
+Arquivos: index.html
+
+ETAPA 03
+Data: 05/04/2026
+Pedido: atualizar manual
+Acao: documentacao da razao de descida, faixa e efeito no voo
+Arquivos: ajuda.html
+
+ETAPA 04
+Data: 05/04/2026
+Pedido: termicas mudarem de lugar a cada 2 minutos com parametro do usuario
+Acao:
+- adicionado thermalRefreshSec (padrao 120s)
+- timer no loop para recriar termicas
+- campo novo no painel
+- manual atualizado
+Arquivos: index.html, ajuda.html
+
+ETAPA 05
+Data: 05/04/2026
+Pedido: indicadores de termica (nuvens e urubus) em 50% das termicas
+Acao:
+- sorteio de marcador em 50% das termicas
+- marcador cloud ou vultures
+- funcoes de desenho no canvas
+Arquivos: index.html
+
+ETAPA 06
+Data: 05/04/2026
+Pedido: atualizar manual dos indicadores
+Acao: manual atualizado com regra de 50% e pistas visuais
+Arquivos: ajuda.html
+
+ETAPA 07
+Data: 05/04/2026
+Pedido: ocultar circulos sem ocultar nuvens/urubus
+Acao:
+- separacao entre drawThermals e drawThermalMarkers
+- marcadores permanecem visiveis mesmo com showThermals desativado
+Arquivos: index.html
+
+ETAPA 08
+Data: 05/04/2026
+Pedido: fundo sem Google Maps mais claro para ver urubus
+Acao: fundo alterado para azul claro quando useGoogleMap = false
+Arquivos: index.html
+
+ETAPA 09
+Data: 05/04/2026
+Pedido: aviao com mais contraste no fundo azul e no Google Maps
+Acao: desenho do aviao com contorno preto e traco branco (alto contraste)
+Arquivos: index.html
+
+ETAPA 10
+Data: 05/04/2026
+Pedido: urubus nao girarem no centro exato da termica
+Acao:
+- offset aleatorio de orbita por termica
+- urubus orbitam em ponto deslocado dentro do circulo
+Arquivos: index.html
+
+ETAPA 11
+Data: 05/04/2026
+Pedido: migrar coleta de dados para PHP + MySQL, erro transparente ao usuario
+Acao:
+- envio de log adaptado para endpoint PHP
+- criado receptor log.php
+- criado script database_setup.sql
+Arquivos: index.html, log.php, database_setup.sql
+
+ETAPA 12
+Data: 05/04/2026
+Pedido: onde configurar credenciais
+Acao: orientacao para configurar db_host, db_user, db_pass, db_name em log.php
+Arquivos: log.php
+
+ETAPA 13
+Data: 05/04/2026
+Pedido: dados nao gravam no banco
+Acao:
+- corrigido bind_param do campo ip_anon
+- corrigida consistencia de banco em database_setup.sql
+- criado log_debug.php para diagnostico
+Arquivos: log.php, database_setup.sql, log_debug.php
+
+ETAPA 14
+Data: 05/04/2026
+Pedido: erro Access denied no log_debug.php
+Acao:
+- ajuste de mysqli_report para tratamento controlado no PHP 8
+- orientacao de permissoes no cPanel (Add User To Database)
+Arquivos: log.php, log_debug.php
+
+ETAPA 15
+Data: 05/04/2026
+Pedido: aumentar instrumentos e reduzir secao B
+Acao:
+- ajuste de proporcao de grid para favorecer secao C
+- aumento dos canvas dos instrumentos
+- ajuste de paddings e margens
+Arquivos: index.html
+
+ETAPA 16
+Data: 06/04/2026
+Pedido: exportar conversa
+Acao:
+- criado resumo geral em TXT
+- criado este TXT detalhado
+- criado CSV tabular
+Arquivos: conversa_projeto_simulador.txt, conversa_projeto_simulador_detalhada.txt, conversa_projeto_simulador.csv
+
+FIM
