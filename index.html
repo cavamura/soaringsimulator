@@ -54,6 +54,8 @@
       position: absolute;
       inset: 0;
       z-index: 1;
+      touch-action: none;
+      cursor: crosshair;
     }
 
     /* ── Section B : Cockpit (top right) ── */
@@ -679,6 +681,10 @@ const MIN_SPEED = 45;
 const MAX_SPEED = 400;
 const MAX_BANK = 70;
 const TURN_GAIN = 0.45;
+const PLANE_SCALE = 0.5;
+const PLANE_BODY_HIT_RADIUS = 30;
+const PLANE_ROTATE_HANDLE_DIST = 24;
+const PLANE_ROTATE_HIT_RADIUS = 18;
 
 let worldW = 0;
 let worldH = 0;
@@ -687,6 +693,13 @@ let trail = [];
 let gameOver = false;
 let isPaused = false;
 let thermalRefreshElapsedSec = 0;
+const aircraftInteraction = {
+  active: false,
+  mode: '',
+  pointerId: null,
+  dragOffsetX: 0,
+  dragOffsetY: 0,
+};
 
 const cMap = document.getElementById('cMap');
 const ctxM = cMap.getContext('2d');
@@ -977,6 +990,88 @@ function thermalLiftAt(x, y) {
   return bestLift;
 }
 
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getMapPointerPosition(evt) {
+  const rect = cMap.getBoundingClientRect();
+  const scaleX = cMap.width / rect.width;
+  const scaleY = cMap.height / rect.height;
+  return {
+    x: (evt.clientX - rect.left) * scaleX,
+    y: (evt.clientY - rect.top) * scaleY,
+  };
+}
+
+function getRotateHandlePosition() {
+  const angle = (ac.hdg - 90) * Math.PI / 180;
+  return {
+    x: ac.x + Math.cos(angle) * PLANE_ROTATE_HANDLE_DIST,
+    y: ac.y + Math.sin(angle) * PLANE_ROTATE_HANDLE_DIST,
+  };
+}
+
+function beginTrailBreak() {
+  if (!trail.length) return;
+  const lastPoint = trail[trail.length - 1];
+  if (lastPoint.breakLine) return;
+  trail.push({ breakLine: true });
+}
+
+function isPointNearPlaneBody(x, y) {
+  return Math.hypot(x - ac.x, y - ac.y) <= PLANE_BODY_HIT_RADIUS;
+}
+
+function isPointNearRotateHandle(x, y) {
+  const handle = getRotateHandlePosition();
+  return Math.hypot(x - handle.x, y - handle.y) <= PLANE_ROTATE_HIT_RADIUS;
+}
+
+function updateAircraftHeadingFromPoint(x, y) {
+  const dx = x - ac.x;
+  const dy = y - ac.y;
+  if (Math.hypot(dx, dy) < 4) return;
+  ac.hdg = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+}
+
+function drawPlaneManipulator(ctx, x, y, hdg) {
+  const handle = getRotateHandlePosition();
+  const isActive = aircraftInteraction.active;
+
+  ctx.save();
+  ctx.strokeStyle = isActive ? 'rgba(255,224,122,0.95)' : 'rgba(255,224,122,0.5)';
+  ctx.fillStyle = isActive ? 'rgba(255,224,122,0.95)' : 'rgba(255,224,122,0.72)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(x, y, 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(handle.x, handle.y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(handle.x, handle.y, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(handle.x, handle.y, 12, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.82)';
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('drag', x + 16, y + 20);
+  ctx.fillText('rota', handle.x + 10, handle.y + 3);
+  ctx.restore();
+}
+
 function drawMap() {
   const W = cMap.width;
   const H = cMap.height;
@@ -1022,7 +1117,8 @@ function drawMap() {
   }
   drawThermalMarkers();
 
-  drawPlane(ctxM, ac.x, ac.y, ac.hdg, 0.5);
+  drawPlane(ctxM, ac.x, ac.y, ac.hdg, PLANE_SCALE);
+  drawPlaneManipulator(ctxM, ac.x, ac.y, ac.hdg);
   drawCompass(ctxM, 46, H - 46, ac.hdg);
 
   ctxM.fillStyle = 'rgba(0,0,0,0.55)';
@@ -1608,21 +1704,23 @@ function loop(ts) {
 
   if (!gameOver && !isPaused) {
     // Aplicar joystick virtual continuamente
-    if (joystick.active) {
+    if (joystick.active && !aircraftInteraction.active) {
       ac.bank  = Math.max(-MAX_BANK, Math.min(MAX_BANK, ac.bank + joystick.dx * 60 * dt));
       ac.speed = Math.max(MIN_SPEED,  Math.min(MAX_SPEED, ac.speed - joystick.dy * 40 * dt));
     }
 
-    const turnRate = ac.bank * TURN_GAIN;
-    ac.hdg = (ac.hdg + turnRate * dt + 360) % 360;
+    if (!aircraftInteraction.active) {
+      const turnRate = ac.bank * TURN_GAIN;
+      ac.hdg = (ac.hdg + turnRate * dt + 360) % 360;
 
-    const pps = ac.speed * 0.3;
-    const rad = (ac.hdg - 90) * Math.PI / 180;
-    ac.x += Math.cos(rad) * pps * dt;
-    ac.y += Math.sin(rad) * pps * dt;
+      const pps = ac.speed * 0.3;
+      const rad = (ac.hdg - 90) * Math.PI / 180;
+      ac.x += Math.cos(rad) * pps * dt;
+      ac.y += Math.sin(rad) * pps * dt;
 
-    ac.x = ((ac.x % worldW) + worldW) % worldW;
-    ac.y = ((ac.y % worldH) + worldH) % worldH;
+      ac.x = ((ac.x % worldW) + worldW) % worldW;
+      ac.y = ((ac.y % worldH) + worldH) % worldH;
+    }
 
     if (config.showTrail) {
       trail.push({ x: ac.x, y: ac.y });
@@ -1677,6 +1775,66 @@ document.getElementById('bRight').addEventListener('click', () => {
   if (gameOver || isPaused) return;
   ac.bank = Math.min(MAX_BANK, ac.bank + 15);
 });
+
+cMap.addEventListener('pointerdown', evt => {
+  if (gameOver) return;
+
+  const point = getMapPointerPosition(evt);
+  let mode = '';
+  if (isPointNearRotateHandle(point.x, point.y)) {
+    mode = 'rotate';
+  } else if (isPointNearPlaneBody(point.x, point.y)) {
+    mode = 'drag';
+  }
+
+  if (!mode) return;
+
+  evt.preventDefault();
+  aircraftInteraction.active = true;
+  aircraftInteraction.mode = mode;
+  aircraftInteraction.pointerId = evt.pointerId;
+
+  if (mode === 'drag') {
+    aircraftInteraction.dragOffsetX = point.x - ac.x;
+    aircraftInteraction.dragOffsetY = point.y - ac.y;
+    beginTrailBreak();
+  } else {
+    ac.bank = 0;
+    updateAircraftHeadingFromPoint(point.x, point.y);
+  }
+
+  cMap.setPointerCapture(evt.pointerId);
+});
+
+cMap.addEventListener('pointermove', evt => {
+  if (!aircraftInteraction.active || evt.pointerId !== aircraftInteraction.pointerId) return;
+
+  evt.preventDefault();
+  const point = getMapPointerPosition(evt);
+
+  if (aircraftInteraction.mode === 'drag') {
+    ac.x = clamp(point.x - aircraftInteraction.dragOffsetX, 0, worldW);
+    ac.y = clamp(point.y - aircraftInteraction.dragOffsetY, 0, worldH);
+  } else if (aircraftInteraction.mode === 'rotate') {
+    ac.bank = 0;
+    updateAircraftHeadingFromPoint(point.x, point.y);
+  }
+});
+
+function endAircraftInteraction(evt) {
+  if (!aircraftInteraction.active || evt.pointerId !== aircraftInteraction.pointerId) return;
+  if (cMap.hasPointerCapture(evt.pointerId)) {
+    cMap.releasePointerCapture(evt.pointerId);
+  }
+  aircraftInteraction.active = false;
+  aircraftInteraction.mode = '';
+  aircraftInteraction.pointerId = null;
+  aircraftInteraction.dragOffsetX = 0;
+  aircraftInteraction.dragOffsetY = 0;
+}
+
+cMap.addEventListener('pointerup', endAircraftInteraction);
+cMap.addEventListener('pointercancel', endAircraftInteraction);
 
 // ═══════════════════════════════════════════════════════════
 //  JOYSTICK VIRTUAL
