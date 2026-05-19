@@ -3,180 +3,387 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ajuda - Simulador IFR</title>
+  <title>Manual de Uso — IFR Training Simulator</title>
   <style>
-    * { box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --navy:      #07101e;
+      --navy-mid:  #0c1826;
+      --navy-card: rgba(12, 24, 42, 0.9);
+      --blue:      #00aaff;
+      --blue-dim:  rgba(0,170,255,0.12);
+      --amber:     #ffe27a;
+      --text:      #d8e7ff;
+      --text-dim:  #7a9fc8;
+      --border:    #1a3256;
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      margin: 0;
+      background: var(--navy);
+      color: var(--text);
       font-family: 'Courier New', Courier, monospace;
-      background: linear-gradient(135deg, #0c1624 0%, #111b2d 60%, #0a111c 100%);
-      color: #d8e7ff;
-      line-height: 1.55;
-      padding: 28px 18px;
+      line-height: 1.7;
     }
-    .wrap {
-      max-width: 920px;
+
+    /* ─── NAV ─── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,16,30,0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo { color: var(--blue); font-size: 16px; font-weight: bold; letter-spacing: 3px; text-decoration: none; }
+    .nav-logo em { color: var(--amber); font-style: normal; }
+    .nav-back {
+      color: var(--text-dim); font-size: 11px; letter-spacing: 1.5px;
+      text-transform: uppercase; text-decoration: none; transition: color .2s;
+    }
+    .nav-back:hover { color: var(--blue); }
+    @media (max-width: 600px) { nav { padding: 12px 18px; } }
+
+    /* ─── LAYOUT ─── */
+    .page {
+      max-width: 900px;
       margin: 0 auto;
-      border: 1px solid #28415f;
-      background: rgba(8, 15, 28, 0.92);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-      padding: 22px 20px;
+      padding: 52px 24px 80px;
     }
-    h1, h2 {
-      margin: 0 0 10px;
-      color: #7fc9ff;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
-    h1 { font-size: 22px; }
-    h2 {
-      font-size: 16px;
-      margin-top: 22px;
-      border-bottom: 1px solid #28415f;
-      padding-bottom: 6px;
-    }
-    p { margin: 0 0 10px; }
-    <h1>Ajuda / Manual</h1>
-    <p class="small">IFR Training Simulator - Navega&ccedil;&atilde;o VOR e Piloto Autom&aacute;tico</p>
 
-    <h2>Objetivo</h2>
-    <p>
-      Dominar a navega&ccedil;&atilde;o VOR (VHF Omnidirectional Range), sintonizar frequ&ecirc;ncias de r&aacute;dio, interpretar o RMI (Radio Magnetic Indicator)
-      e usar o piloto autom&aacute;tico para manter proas selecionadas. Um simulador voltado ao treinamento de navega&ccedil;&atilde;o a&eacute;rea.
-    </p>
-
-    <h2>Como o Simulador Funciona</h2>
-    <div class="card">
-      <p><strong>Se&ccedil;&atilde;o A (Mapa):</strong> vista superior da aeronave, trajet&oacute;ria, e esta&ccedil;&otilde;es VOR (s&iacute;mbolos hexagonais com frequ&ecirc;ncia).</p>
-      <p><strong>Se&ccedil;&atilde;o B (Cockpit):</strong> horizonte artificial com indica&ccedil;&atilde;o de atitude e rumo (heading).</p>
-      <p><strong>Se&ccedil;&atilde;o C (Painel IFR):</strong> RMI (Radio Magnetic Indicator), seletor de proa (heading bug), NAV/DME e piloto autom&aacute;tico.</p>
-      <p>
-        <strong>VORs (Esta&ccedil;&otilde;es):</strong> At&eacute; 3 esta&ccedil;&otilde;es VOR aparecem aleatoriamente no mapa. Cada VOR possui uma frequ&ecirc;ncia VHF NAV e est&aacute; identificado
-        com seu nome (VOR A, VOR B, VOR C). Selecione uma esta&ccedil;&atilde;o no painel NAV para navegar at&eacute; ela.
-      </p>
-      <p>
-        <strong>RMI:</strong> Mostra o rumo magn&eacute;tico atual (lubber line em amarelo) e, quando uma esta&ccedil;&atilde;o VOR est&aacute; sintonizada,
-        exibe um ponteiro vermelho indicando a dire&ccedil;&atilde;o (bearing) at&eacute; a esta&ccedil;&atilde;o.
-      </p>
-      <p>
-        <strong>NAV/DME:</strong> Sintonize a frequ&ecirc;ncia de um VOR usando o campo NAV e clique em "Sintonizar". O painel exibe
-        o DME (distance to station) em milhas n&aacute;uticas.
-      </p>
-      <p>
-        <strong>Piloto Autom&aacute;tico:</strong> Ligue o AP (Autopilot) e configure uma proa no indicador de dire&ccedil;&atilde;o. A aeronave
-        automaticamente curva e se estabiliza na proa selecionada.
-      </p>
-    </div>
-
-    <h2>Guia de Opera&ccedil;&atilde;o</h2>
-    ul, ol {
-      margin: 8px 0 12px;
-      <li>A miss&atilde;o gera at&eacute; 3 esta&ccedil;&otilde;es VOR aleatoriamente na regi&atilde;o do mapa.</li>
-      <li>Para navegar para uma esta&ccedil;&atilde;o VOR:</li>
+    /* ─── HEADER ─── */
+    .page-tag {
+      font-size: 10px; letter-spacing: 4px; text-transform: uppercase;
+      color: var(--blue); margin-bottom: 10px;
     }
-    li { margin: 4px 0; }
-      <li>Localize a frequ&ecirc;ncia da esta&ccedil;&atilde;o no mapa (exibida no s&iacute;mbolo hexagonal).</li>
-      <li>Digite a frequ&ecirc;ncia no campo <strong>NAV</strong> e clique em <strong>Sintonizar</strong>.</li>
-      <li>Observe o RMI: o ponteiro vermelho aponta para a esta&ccedil;&atilde;o.</li>
-      <li>O painel <strong>DME</strong> mostra a dist&acirc;ncia at&eacute; a esta&ccedil;&atilde;o em milhas n&aacute;uticas.</li>
+    .page-title {
+      font-size: clamp(24px, 5vw, 40px);
+      font-weight: bold; color: #fff;
+      letter-spacing: 2px; text-transform: uppercase;
+      line-height: 1.1; margin-bottom: 12px;
     }
-    .small { color: #9bb3d1; font-size: 13px; }
-    a { color: #8fd4ff; }
-      <li>Usando o Piloto Autom&aacute;tico:</li>
-      border: 1px solid #356083;
-      background: rgba(15, 35, 55, 0.8);
-      <li>Ligue o <strong>AP (Autopilot)</strong> clicando no bot&atilde;o "AP OFF" para mudar para "AP ON".</li>
-      <li>Digite a proa desejada no campo <strong>Indicador de dire&ccedil;&atilde;o / Proa</strong> e clique em <strong>Setar</strong>.</li>
-      <li>A aeronave automaticamente curva at&eacute; estabilizar na proa selecionada.</li>
-      <li>Com AP desligado, use os bot&otilde;es <strong>&larr; / &rarr;</strong> para pilotar manualmente.</li>
+    .page-sub {
+      font-size: 13px; color: var(--text-dim);
+      max-width: 580px; margin-bottom: 52px;
+    }
+
+    /* ─── SEÇÕES ─── */
+    .section { margin-bottom: 52px; }
+    .section + .section { border-top: 1px solid var(--border); padding-top: 44px; }
+
+    .sec-title {
+      font-size: 13px; font-weight: bold; color: var(--amber);
+      text-transform: uppercase; letter-spacing: 2px;
+      margin-bottom: 20px;
+    }
+    .sec-title::before {
+      content: '▸ ';
+      color: var(--blue);
+    }
+
+    /* ─── CARDS DE CONTROLE ─── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--navy-card);
+      border: 1px solid var(--border);
+      padding: 20px;
+      transition: border-color .2s;
+    }
+    .card:hover { border-color: rgba(0,170,255,.4); }
+    .card-title {
+      font-size: 11px; font-weight: bold;
+      color: var(--blue); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 8px;
+    }
+    .card p { font-size: 12px; color: var(--text-dim); }
+
+    /* ─── TABELA DE TECLAS ─── */
+    .key-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .key-table th {
+      text-align: left; font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      padding: 6px 12px;
+    }
+    .key-table td {
+      font-size: 12px; color: var(--text-dim);
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(26,50,86,.5);
+      vertical-align: top;
+    }
+    .key-table tr:last-child td { border-bottom: none; }
+    .key {
+      display: inline-block;
+      background: rgba(0,170,255,.1);
+      border: 1px solid rgba(0,170,255,.35);
+      color: var(--blue);
+      font-size: 11px; font-weight: bold;
+      padding: 1px 8px;
+      letter-spacing: 1px;
+    }
+    .key-table td:first-child { white-space: nowrap; }
+
+    /* ─── LISTA DE PASSOS ─── */
+    .steps { list-style: none; counter-reset: steps; margin-top: 16px; }
+    .steps li {
+      counter-increment: steps;
+      display: flex; gap: 16px; align-items: flex-start;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(26,50,86,.4);
+      font-size: 13px; color: var(--text-dim);
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(steps, decimal-leading-zero);
+      flex-shrink: 0;
+      font-size: 18px; font-weight: bold;
+      color: rgba(0,170,255,.25);
+      line-height: 1;
+      min-width: 28px;
+    }
+    .steps strong { color: var(--text); }
+
+    /* ─── NOTA ─── */
+    .note {
+      background: rgba(255,226,122,.06);
+      border-left: 3px solid var(--amber);
+      padding: 14px 18px;
+      margin-top: 20px;
+      font-size: 12px; color: var(--text-dim);
+    }
+    .note strong { color: var(--amber); }
+
+    /* ─── MODO BADGE ─── */
+    .badge {
+      display: inline-block;
+      font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+      padding: 3px 10px;
+      border: 1px solid;
+      margin-right: 8px; margin-bottom: 6px;
+    }
+    .badge-blue  { border-color: var(--blue);  color: var(--blue);  background: var(--blue-dim); }
+    .badge-amber { border-color: var(--amber); color: var(--amber); background: rgba(255,226,122,.08); }
+
+    /* ─── BOTÃO SIMULADOR ─── */
+    .cta {
+      display: inline-block;
+      margin-top: 40px;
+      padding: 13px 32px;
+      background: var(--blue); color: #000;
+      font-family: 'Courier New', monospace;
+      font-size: 12px; font-weight: bold;
+      letter-spacing: 2px; text-transform: uppercase;
+      text-decoration: none;
+      transition: background .18s, transform .12s;
+    }
+    .cta:hover { background: #33c5ff; transform: translateY(-2px); }
+  </style>
 </head>
 <body>
-  <div class="wrap">
-      <li>Controles Manuais (AP desligado):</li>
-        Em cerca de <strong>50% das t&eacute;rmicas</strong>, aparecem indicadores visuais sobre o c&iacute;rculo:
-     <ul>
-      <li><strong>&larr; / &rarr;</strong> Aumenta ou diminui o &acirc;ngulo de curva (bank).</li>
-      <li><strong>&uarr; / &darr;</strong> Aumenta ou reduz a velocidade da aeronave.</li>
-      <li><strong>P</strong> Pausa e retoma a simula&ccedil;&atilde;o.</li>
-      <li><strong>H</strong> Abre este manual de ajuda.</li>
-    </ul>
 
-    <ol start="5">
-      <li>Configura&ccedil;&atilde;o:</li>
-    </ol>
-    <ul>
-      <li>Painel <strong>"Configura&ccedil;&atilde;o da Simula&ccedil;&atilde;o"</strong> permite ativar <strong>Google Maps</strong> como fundo do mapa.</li>
-      <li>Op&ccedil;&atilde;o <strong>"Mostrar trajet&oacute;ria"</strong> desenha o rastro da aeronave no mapa.</li>
-      <li>URL de log opcional para registrar dados de voo em servidor remoto ou Google Apps Script.</li>
-    </ul>
+<nav>
+  <a class="nav-logo" href="index.html">IFR<em>Training</em></a>
+  <a class="nav-back" href="index.html">← Voltar</a>
+</nav>
 
-    <h2>Dicas de Treinamento</h2>
-        <strong>nuvens c&uacute;mulus</strong> (vista superior) ou um grupo de <strong>3 urubus</strong>
-      <li>Comece sintonizando uma esta&ccedil;&atilde;o pr&oacute;xima para familiarizar-se com o RMI e DME.</li>
-      <li>Pratique o uso do piloto autom&aacute;tico mantendo uma proa constante enquanto se aproxima de uma esta&ccedil;&atilde;o.</li>
-      <li>Combine navega&ccedil;&atilde;o manual com AP: solte o AP para ajustes finos perto da esta&ccedil;&atilde;o.</li>
-      <li>Acompanhe a dist&acirc;ncia DME conforme voc&ecirc; se aproxima da esta&ccedil;&atilde;o (deve diminuir progressivamente).</li>
-      <li>Experimente diferentes frequ&ecirc;ncias VOR para treinar m&uacute;ltiplas abordagens.</li>
-    <h2>Manual de Uso</h2>
-    <ol>
-      <li>Abra o simulador no navegador.</li>
-      <li>Use os controles para pilotar:</li>
-    </ol>
-    <ul>
-      <li><strong>&larr;</strong> Curva 5&deg; para a esquerda.</li>
-      <li><strong>&rarr;</strong> Curva 5&deg; para a direita.</li>
-      <li><strong>&uarr;</strong> Aumenta a velocidade.</li>
-      <li><strong>&darr;</strong> Reduz a velocidade.</li>
-      <li><strong>P</strong> Pausa/retoma simula&ccedil;&atilde;o.</li>
-    </ul>
+<div class="page">
 
-    <ol start="3">
-      <li>Observe os instrumentos:</li>
-    </ol>
-    <ul>
-      <li><strong>Veloc&iacute;metro:</strong> velocidade atual.</li>
-      <li><strong>Alt&iacute;metro:</strong> altitude da aeronave em metros.</li>
-      <li><strong>Vari&ocirc;metro:</strong> taxa de subida/descida (m/s).</li>
-    </ul>
+  <p class="page-tag">Documentação</p>
+  <h1 class="page-title">Manual de Uso</h1>
+  <p class="page-sub">
+    Guia completo do IFR Training Simulator — navegação VOR, instrumentos, piloto automático e configurações.
+  </p>
 
-    <ol start="4">
-      <li>
-        Em <strong>Configura&ccedil;&atilde;o da simula&ccedil;&atilde;o</strong>, ajuste altitude inicial, n&uacute;mero de t&eacute;rmicas,
-        <strong>raz&atilde;o de descida fora de t&eacute;rmica (m/s)</strong>,
-        <strong>intervalo de recria&ccedil;&atilde;o das t&eacute;rmicas (s)</strong>, visualiza&ccedil;&atilde;o de trilha,
-        mapa Google e URL de log (Apps Script).
-      </li>
-      <li>
-        A raz&atilde;o de descida define a perda de altitude quando a aeronave est&aacute; fora das t&eacute;rmicas.
-        Valor maior = perda mais r&aacute;pida de altitude. Valor menor = planeio mais eficiente.
-      </li>
-      <li>
-        Faixa recomendada: <strong>0,1 a 10,0 m/s</strong>. O valor padr&atilde;o &eacute; <strong>1,0 m/s</strong>.
-      </li>
-      <li>
-        O intervalo de recria&ccedil;&atilde;o define de quantos em quantos segundos as t&eacute;rmicas mudam de lugar.
-        Valor padr&atilde;o: <strong>120 s</strong> (2 minutos). Faixa dispon&iacute;vel: <strong>10 a 600 s</strong>.
-      </li>
-      <li>
-        Clique em <strong>Aplicar</strong> para usar as configura&ccedil;&otilde;es atuais e em <strong>Reiniciar</strong>
-        para come&ccedil;ar uma nova sess&atilde;o.
-      </li>
-      <li>Se a altitude chegar a 0 m, o voo termina.</li>
-    </ol>
-
-    <h2>Dicas R&aacute;pidas</h2>
-    <ul>
-      <li>Mantenha curvas suaves para n&atilde;o perder efici&ecirc;ncia.</li>
-      <li>Procure e permane&ccedil;a nas t&eacute;rmicas para recuperar altitude.</li>
-      <li>Nuvens c&uacute;mulus e urubus em c&iacute;rculo s&atilde;o pistas visuais de t&eacute;rmica na Se&ccedil;&atilde;o A.</li>
-      <li>Controle a velocidade para evitar extremos de voo lento ou r&aacute;pido demais.</li>
-    </ul>
-
-    <h2>Contato</h2>
-    <div class="contact">
-      <p><strong>Respons&aacute;vel:</strong> L. Cavamura Jr.</p>
-      <p><strong>E-mail:</strong> <a href="mailto:lcavamura@gmail.com">lcavamura@gmail.com</a></p>
+  <!-- ═══ VISÃO GERAL ═══ -->
+  <div class="section">
+    <p class="sec-title">Visão Geral da Interface</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Seção A — Mapa</div>
+        <p>Vista superior da aeronave com rastro de trajetória, até 3 estações VOR e fundo configurável (grade ou Google Maps).</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Seção B — Cockpit</div>
+        <p>Horizonte artificial com indicação de atitude (pitch e bank), fita de rumo e caixas de velocidade e altitude.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Seção C — Painel IFR</div>
+        <p>RMI, seletor de proa (Heading Bug), painel NAV/DME e botão de piloto automático.</p>
+      </div>
     </div>
   </div>
+
+  <!-- ═══ NAVEGAÇÃO VOR ═══ -->
+  <div class="section">
+    <p class="sec-title">Navegação VOR</p>
+    <ol class="steps">
+      <li>
+        <span>Localize no mapa os símbolos hexagonais — cada um é uma estação VOR com nome (VOR A, B ou C) e frequência VHF exibidos abaixo.</span>
+      </li>
+      <li>
+        <span>No painel <strong>NAV</strong>, digite a frequência da estação desejada (ex.: <strong>113.8</strong>) e clique em <strong>Sintonizar</strong>.</span>
+      </li>
+      <li>
+        <span>O ponteiro vermelho do <strong>RMI</strong> passa a apontar continuamente para a estação sintonizada. Gire a aeronave até o ponteiro ficar a 12h para voar diretamente em direção a ela.</span>
+      </li>
+      <li>
+        <span>O painel <strong>DME</strong> mostra a distância até a estação em milhas náuticas (NM) e o radial atual.</span>
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Dica:</strong> O RMI gira com o rumo da aeronave — igual ao instrumento real. Mantenha o ponteiro sempre a 12h para tracking direto à estação.
+    </div>
+  </div>
+
+  <!-- ═══ PILOTO AUTOMÁTICO ═══ -->
+  <div class="section">
+    <p class="sec-title">Piloto Automático</p>
+    <ol class="steps">
+      <li>
+        <span>Ajuste a proa desejada no <strong>Heading Bug</strong> (seletor HDG) usando os botões <strong>−</strong> e <strong>+</strong> ou digitando o valor diretamente.</span>
+      </li>
+      <li>
+        <span>Clique em <strong>AP OFF</strong> para ativar — o botão muda para <strong>AP ON</strong> com destaque em azul.</span>
+      </li>
+      <li>
+        <span>A aeronave curva automaticamente até estabilizar na proa selecionada pelo Heading Bug.</span>
+      </li>
+      <li>
+        <span>Para desligar, clique novamente em <strong>AP ON</strong>. Com AP desligado, controle o rumo manualmente pelas teclas.</span>
+      </li>
+    </ol>
+    <div class="note">
+      <strong>Dica de treinamento:</strong> Sintonize um VOR, leia o bearing no RMI e use o AP para interceptar o radial — pratique o mesmo procedimento que usará num voo real IFR.
+    </div>
+  </div>
+
+  <!-- ═══ CONTROLES ═══ -->
+  <div class="section">
+    <p class="sec-title">Controles de Teclado</p>
+    <table class="key-table">
+      <thead>
+        <tr>
+          <th>Tecla</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="key">←</span></td>
+          <td>Curva para a esquerda (aumenta bank)</td>
+        </tr>
+        <tr>
+          <td><span class="key">→</span></td>
+          <td>Curva para a direita (aumenta bank)</td>
+        </tr>
+        <tr>
+          <td><span class="key">↑</span></td>
+          <td>Aumenta a velocidade</td>
+        </tr>
+        <tr>
+          <td><span class="key">↓</span></td>
+          <td>Reduz a velocidade</td>
+        </tr>
+        <tr>
+          <td><span class="key">P</span></td>
+          <td>Pausa / retoma a simulação</td>
+        </tr>
+        <tr>
+          <td><span class="key">H</span></td>
+          <td>Abre este manual de ajuda</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ CONTROLES TOUCH ═══ -->
+  <div class="section">
+    <p class="sec-title">Controles Touch e Mouse</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Arrastar aeronave</div>
+        <p>Clique e arraste o ícone da aeronave no mapa para reposicioná-la livremente.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Girar proa</div>
+        <p>Arraste o handle de rotação ao redor da aeronave para definir o rumo inicial.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Mover VORs</div>
+        <p>Arraste qualquer estação VOR no mapa para mudar sua posição e criar novos cenários.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Joystick virtual</div>
+        <p>Em dispositivos touch, use o joystick virtual (canto inferior esquerdo) para controlar o rumo com o polegar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MODOS ═══ -->
+  <div class="section">
+    <p class="sec-title">Modos de Treino</p>
+    <p style="font-size:13px; color:var(--text-dim); margin-bottom:20px;">
+      Configure a visibilidade dos elementos no painel <strong style="color:var(--text)">Configurações</strong> para ajustar a dificuldade.
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <span class="badge badge-blue">Padrão</span>
+        <div class="card-title" style="margin-top:10px">Mapa Visível</div>
+        <p>Aeronave e VORs visíveis no mapa. Ideal para iniciantes aprenderem a geometria da navegação VOR.</p>
+      </div>
+      <div class="card">
+        <span class="badge badge-amber">Avançado</span>
+        <div class="card-title" style="margin-top:10px">Modo IMC</div>
+        <p>Aeronave e VORs ocultos no mapa. Navegue exclusivamente pelo RMI, DME e Heading Bug — simulando voo em nuvens.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONFIGURAÇÕES ═══ -->
+  <div class="section">
+    <p class="sec-title">Configurações</p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">Google Maps</div>
+        <p>Ative para usar mapa real como fundo. Configure latitude, longitude e zoom para treinar sobre sua área de voo.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Mostrar trajetória</div>
+        <p>Desenha o rastro da aeronave no mapa, útil para analisar a trajetória de interceptação de radial.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Ocultar aeronave / VORs</div>
+        <p>Ativa o Modo IMC individualmente — oculte a aeronave, os VORs ou ambos para aumentar a dificuldade.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Log de voo (URL)</div>
+        <p>Informe uma URL (ex.: Google Apps Script) para registrar dados de cada sessão em servidor remoto. Útil para instrutores acompanharem alunos.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DICAS ═══ -->
+  <div class="section">
+    <p class="sec-title">Dicas de Treinamento</p>
+    <ol class="steps">
+      <li><span>Comece sintonizando o VOR mais próximo para familiarizar-se com a leitura do RMI e do DME.</span></li>
+      <li><span>Pratique o AP: sintonize um VOR, leia o bearing, configure esse valor no Heading Bug e ligue o AP — observe a aeronave interceptar.</span></li>
+      <li><span>Avance para o Modo IMC assim que conseguir navegar confortavelmente com os elementos visíveis.</span></li>
+      <li><span>Use o Google Maps na região onde você realmente voa para simular procedimentos reais com referências geográficas familiares.</span></li>
+      <li><span>Projete em sala de aula: mova os VORs no mapa ao vivo para montar cenários pedagógicos durante a aula.</span></li>
+    </ol>
+  </div>
+
+  <a class="cta" href="simulador.html">Abrir Simulador</a>
+
+</div>
+
 </body>
 </html>
