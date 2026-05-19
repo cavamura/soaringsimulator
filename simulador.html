@@ -1,0 +1,2572 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flight Simulator</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', Courier, monospace;
+      overflow: hidden;
+    }
+
+    #sim {
+      display: grid;
+      width: min(1100px, 100vw);
+      height: min(660px, 100vh);
+      grid-template-columns: 58% 42%;
+      grid-template-rows: 30% 70%;
+      border: 2px solid #444;
+    }
+
+    /* ── Section A : Map (full height, left) ── */
+    #sec-a {
+      grid-column: 1;
+      grid-row: 1 / 3;
+      position: relative;
+      overflow: hidden;
+      border-right: 3px solid #00aaff;
+      background: #152238;
+    }
+
+    #map-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: #152238;
+    }
+
+    #map-bg iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      filter: saturate(0.9) contrast(1.05);
+    }
+
+    #cMap {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    #joystick-wrap {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      z-index: 60;
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 50%, rgba(0,170,255,0.16), rgba(0,10,24,0.38));
+      box-shadow: 0 0 0 2px rgba(0,170,255,0.35), 0 10px 28px rgba(0,0,0,0.28);
+    }
+
+    #cJoystick {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      border-radius: 50%;
+      border: 2px solid rgba(0,170,255,0.72);
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,0.10) 0, rgba(255,255,255,0.04) 22%, transparent 23%),
+        radial-gradient(circle at 50% 50%, rgba(0,170,255,0.18) 0, rgba(0,170,255,0.10) 48%, rgba(0,0,0,0.18) 100%);
+      touch-action: none;
+    }
+
+    #joystick-knob {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border: 2px solid #00aaff;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(0,170,255,0.6), rgba(0,100,150,0.3));
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 10px rgba(0,170,255,0.4);
+      cursor: grab;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* ── Section B : Cockpit (top right) ── */
+    #sec-b {
+      grid-column: 2;
+      grid-row: 1;
+      position: relative;
+      overflow: hidden;
+      border-bottom: 3px solid #00aaff;
+      background: #080814;
+    }
+
+    /* ── Section C : Instruments (bottom right) ── */
+    #sec-c {
+      grid-column: 2;
+      grid-row: 2;
+      background: #080814;
+      display: flex;
+      flex-direction: column;
+      padding: 3px 5px 3px;
+      gap: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Section labels (A, B, C circles) */
+    .slbl {
+      position: absolute;
+      top: 8px; left: 8px;
+      width: 30px; height: 30px;
+      border: 2px solid #000;
+      border-radius: 50%;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+              z-index: 2;
+              pointer-events: none;
+      font-weight: bold; font-size: 13px; color: #000;
+      z-index: 100;
+    }
+    #lbl-c { left: auto; right: 8px; }
+
+    canvas { display: block; }
+
+    /* Instruments strip */
+    .instr-row {
+      display: flex;
+      gap: 3px;
+      margin-top: 0;
+    }
+
+    .instr-row canvas {
+      display: block;
+    }
+
+    .nav-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      min-width: 0;
+    }
+        color: #9ec4e8;
+    
+      #ap-toggle {
+        border: 2px solid #ff6b6b;
+        background: linear-gradient(135deg, #3a1a1a, #2a0a0a);
+        color: #ffaaaa;
+        padding: 6px 12px;
+        color: #b8c4e0 !important;
+        font-weight: bold;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+
+      function resetAircraftToCenter() {
+        ac.x = worldW / 2;
+        ac.y = worldH / 2;
+        ac.bank = 0;
+        beginTrailBreak();
+      }
+        border-radius: 2px;
+        color: #7fc9ff !important;
+        width: 100%;
+      }
+
+      #ap-toggle:hover {
+        background: linear-gradient(135deg, #4a2a2a, #3a1a1a);
+        box-shadow: inset 0 1px 2px rgba(255,0,0,0.3), 0 0 6px rgba(255,107,107,0.2);
+      }
+
+        color: #b8c4e0 !important;
+            if (
+              ac.x <= AIRCRAFT_RESET_MARGIN ||
+              ac.x >= worldW - AIRCRAFT_RESET_MARGIN ||
+              ac.y <= AIRCRAFT_RESET_MARGIN ||
+              ac.y >= worldH - AIRCRAFT_RESET_MARGIN
+            ) {
+              resetAircraftToCenter();
+            }
+      .cfg-panel,
+      .cfg-panel * {
+        color: #b8c4e0;
+      }
+        color: #7fc9ff;
+        padding: 4px 8px;
+        font-size: 10px;
+        cursor: pointer;
+        border-radius: 2px;
+      const joystickBase = document.getElementById('joystick-wrap') || document.getElementById('cJoystick');
+      .game-status {
+        color: #9ec4e8;
+      }
+      .hint {
+        color: #7e93b2;
+      }
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        box-shadow: inset 0 1px 2px rgba(0,170,255,0.2);
+      }
+
+      .cfg-btn:hover {
+        background: linear-gradient(135deg, #12324a, #091f35);
+        box-shadow: inset 0 1px 2px rgba(0,170,255,0.3), 0 0 4px rgba(0,170,255,0.15);
+      }
+
+
+    .nav-card {
+      border: 1px solid #35506d;
+      background: #0d1726;
+      padding: 3px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .nav-card label,
+    .nav-title {
+      color: #b8c4e0;
+      font-size: 10px;
+      line-height: 1.2;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .nav-line {
+      display: flex;
+      gap: 5px;
+    }
+
+    .nav-line input {
+      flex: 1;
+      background: #070712;
+      border: 1px solid #365;
+      color: #dff;
+      font-size: 10px;
+      padding: 2px 4px;
+      width: 100%;
+    }
+
+    .nav-readout {
+      color: #ffd966;
+      font-size: 10px;
+      min-height: 12px;
+    }
+
+    .heading-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #g-hdg {
+      width: 120px;
+      height: 120px;
+      border: 1px solid #34506b;
+      background: #0b0f1f;
+      border-radius: 50%;
+    }
+
+    #heading-knob {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 2px solid #6f7c92;
+      background: radial-gradient(circle at 30% 30%, #4b5670, #222b3b 70%);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.2), 0 1px 2px rgba(0,0,0,0.45);
+      cursor: ns-resize;
+      position: relative;
+    }
+
+    #heading-knob::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 4px;
+      width: 2px;
+      height: 10px;
+      transform: translateX(-50%);
+      background: #ffd966;
+      border-radius: 2px;
+    }
+
+    #copyright {
+      grid-column: 1 / 3;
+      text-align: center;
+      padding: 4px 8px;
+      font-size: 9px;
+      color: #7fc9ff;
+      background: #0a1520;
+      border-top: 1px solid #1e3a55;
+      letter-spacing: 0.3px;
+    }
+
+    .cfg-panel {
+      border: 1px solid #334;
+      background: #101022;
+      padding: 5px;
+      margin-top: 6px;
+      font-size: 9px;
+    }
+
+    /* Override de contraste para garantir legibilidade do painel de configuracao */
+    #sec-c .cfg-panel {
+      background: #152238 !important;
+      border: 1px solid #2f4f74 !important;
+      color: #dbe9ff !important;
+      font-size: 9px !important;
+    }
+
+    #sec-c .cfg-panel summary {
+      color: #9fd0ff !important;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+      font-size: 9px !important;
+    }
+
+    #sec-c .cfg-panel label,
+    #sec-c .cfg-panel span,
+    #sec-c .cfg-panel div {
+      color: #dbe9ff !important;
+    }
+
+    #sec-c .cfg-panel input[type='text'],
+    #sec-c .cfg-panel input[type='number'] {
+      background: #0c1526 !important;
+      border: 1px solid #476b93 !important;
+      color: #e8f3ff !important;
+    }
+
+    #sec-c .cfg-panel input::placeholder {
+      color: #9ab4d3;
+    }
+
+    #sec-c .cfg-panel .cfg-btn {
+      background: #19324f !important;
+      border: 1px solid #5b8fc2 !important;
+      color: #e5f2ff !important;
+      font-weight: bold;
+    }
+
+    .cfg-panel summary {
+      cursor: pointer;
+      .nav-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: min(240px, 100%);
+      }
+
+      .nav-card {
+        border: 2px solid #1a3a50;
+        background: linear-gradient(135deg, #0c1520 0%, #0d1828 100%);
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        border-radius: 3px;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.4);
+      }
+
+      .nav-card label,
+      .nav-title {
+        color: #7fc9ff;
+        font-size: 11px;
+        .nav-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          width: min(240px, 100%);
+        }
+
+        .nav-card {
+          border: 2px solid #1a3a50;
+          background: linear-gradient(135deg, #0c1520 0%, #0d1828 100%);
+          padding: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          border-radius: 3px;
+          box-shadow: inset 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.4);
+        }
+
+        .nav-card label,
+        .nav-title {
+          color: #7fc9ff;
+          font-size: 11px;
+          line-height: 1.2;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          font-weight: bold;
+        }
+
+        .nav-line {
+          display: flex;
+          gap: 6px;
+          align-items: center;
+        }
+
+        .nav-line input {
+          flex: 1;
+          background: #051015;
+          border: 1px solid #2a4555;
+          color: #00ff88;
+          font-size: 11px;
+          padding: 4px 5px;
+          width: 100%;
+          font-family: 'Courier New', monospace;
+          font-weight: bold;
+        }
+
+        .nav-line input:focus {
+          outline: none;
+          border-color: #00ff88;
+          box-shadow: 0 0 6px rgba(0,255,136,0.3);
+        }
+
+        .nav-readout {
+          color: #ffe27a;
+          font-size: 11px;
+          min-height: 14px;
+          background: rgba(0,0,0,0.3);
+          padding: 3px 5px;
+          border-left: 2px solid #ffd966;
+          line-height: 1.3;
+        }
+      padding: 1px 6px;
+      font-size: 9px;
+      cursor: pointer;
+    }
+
+    .cfg-btn:hover {
+      background: #12324a;
+    }
+
+    @media (max-width: 1060px) {
+      .cfg-btn {
+        border: 1px solid #00aaff;
+        background: linear-gradient(135deg, #0a1e2f, #051428);
+        color: #7fc9ff;
+        padding: 4px 8px;
+        font-size: 10px;
+        cursor: pointer;
+        border-radius: 2px;
+        font-weight: bold;
+        .cfg-panel summary {
+          cursor: pointer;
+        }
+      }
+
+      .btn {
+        width: 54px;
+        height: 54px;
+        font-size: 24px;
+      }
+
+      #copyright {
+        display: none;
+      }
+    }
+
+    @media (max-width: 900px) and (orientation: landscape) {
+      #sim {
+        grid-template-columns: 60% 40%;
+        grid-template-rows: 34% 66%;
+      }
+
+      #sec-a {
+        @media (max-width: 1060px) {
+          .btn {
+            width: 54px;
+            height: 54px;
+            font-size: 24px;
+          }
+
+          #copyright {
+            display: none;
+          }
+        }
+        height: 46px;
+        font-size: 20px;
+      }
+
+      .sim-btn {
+        .cfg-panel {
+          border: 1px solid #334;
+          background: #101022;
+          padding: 5px;
+          margin-top: 6px;
+          color: #b8c4e0;
+          font-size: 11px;
+        }
+
+        .cfg-panel summary {
+          cursor: pointer;
+          color: #7fc9ff;
+          font-weight: bold;
+          text-transform: uppercase;
+          letter-spacing: 0.4px;
+        }
+
+        .cfg-panel label {
+          display: block;
+          margin-top: 4px;
+          color: #b8c4e0;
+          line-height: 1.25;
+        }
+
+        .cfg-panel input[type='text'],
+        .cfg-panel input[type='number'] {
+          width: 100%;
+          margin-top: 2px;
+          background: #051015;
+          border: 1px solid #2a4555;
+          color: #dff;
+          padding: 3px 5px;
+          font-size: 11px;
+        }
+
+        @media (max-width: 1060px) {
+          .btn {
+            width: 54px;
+            height: 54px;
+            font-size: 24px;
+          }
+
+          #copyright {
+            display: none;
+          }
+        }
+
+        @media (max-width: 900px) and (orientation: landscape) {
+          #sim {
+            grid-template-columns: 60% 40%;
+            grid-template-rows: 34% 66%;
+          }
+
+          #sec-a {
+      background: #0d1b2e;
+      border-top: 2px solid #00aaff;
+      .cfg-panel {
+        border: 1px solid #334;
+        background: #101022;
+        padding: 5px;
+        margin-top: 6px;
+      }
+
+      .cfg-panel summary {
+        cursor: pointer;
+      }
+
+      @media (max-width: 1060px) {
+        .btn {
+          width: 54px;
+          height: 54px;
+          font-size: 24px;
+        }
+
+        #copyright {
+          display: none;
+        }
+      }
+
+      @media (max-width: 900px) and (orientation: landscape) {
+        #sim {
+          grid-template-columns: 60% 40%;
+          grid-template-rows: 34% 66%;
+        }
+
+        #sec-a {
+      }
+
+      .sim-btn {
+        font-size: 9px;
+        padding: 2px 6px;
+      }
+
+      .hint {
+        color: #444;
+        font-size: 10px;
+        text-align: right;
+        margin-top: -4px;
+      }
+
+      /* Overrides de layout da area C para evitar clipping e manter o knob visivel. */
+      #sec-c .instr-row {
+        display: flex !important;
+        align-items: flex-start !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+      }
+
+      #sec-c #g-rmi {
+        width: 128px !important;
+        height: 128px !important;
+        flex: 0 0 128px !important;
+      }
+
+      #sec-c .nav-stack {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+      }
+
+      #sec-c .heading-wrap {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        flex-wrap: nowrap !important;
+      }
+
+      #sec-c #g-hdg {
+        flex: 0 0 120px !important;
+      }
+
+      #sec-c #heading-knob {
+        display: inline-block !important;
+        flex: 0 0 34px !important;
+        min-width: 34px !important;
+        min-height: 34px !important;
+        transform-origin: 50% 50% !important;
+      }
+
+      @media (max-width: 980px) {
+        #sec-c .instr-row {
+          flex-direction: column !important;
+          align-items: center !important;
+        }
+
+        #sec-c .nav-stack {
+          width: 100% !important;
+        }
+
+        #sec-c .heading-wrap {
+          justify-content: flex-start !important;
+        }
+      }
+
+      #joystick-wrap {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        z-index: 60;
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: radial-gradient(circle at 50% 50%, rgba(0,170,255,0.16), rgba(0,10,24,0.38));
+        box-shadow: 0 0 0 2px rgba(0,170,255,0.35), 0 10px 28px rgba(0,0,0,0.28);
+      }
+
+      #cJoystick {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        border-radius: 50%;
+        border: 2px solid rgba(0,170,255,0.72);
+        background:
+          radial-gradient(circle at 50% 50%, rgba(255,255,255,0.10) 0, rgba(255,255,255,0.04) 22%, transparent 23%),
+          radial-gradient(circle at 50% 50%, rgba(0,170,255,0.18) 0, rgba(0,170,255,0.10) 48%, rgba(0,0,0,0.18) 100%);
+        touch-action: none;
+      }
+
+      #joystick-knob {
+        position: absolute;
+        width: 60px;
+        height: 60px;
+        border: 2px solid #00aaff;
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, rgba(0,170,255,0.6), rgba(0,100,150,0.3));
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        box-shadow: inset 0 1px 3px rgba(255,255,255,0.3), 0 0 10px rgba(0,170,255,0.4);
+        cursor: grab;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      #joystick-knob:active {
+        cursor: grabbing;
+        box-shadow: inset 0 1px 3px rgba(255,255,255,0.5), 0 0 15px rgba(0,170,255,0.6);
+      }
+
+    /* ── Controles compactos do rodapé de C ── */
+    .ctrl-row {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+    }
+
+    .btn {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      padding: 0;
+      background: #0c1e32;
+      border: 1px solid #2a4565;
+      color: #7fc9ff;
+      cursor: pointer;
+      border-radius: 3px;
+      line-height: 1;
+    }
+
+    .btn:hover {
+      background: #122840;
+      border-color: #00aaff;
+    }
+
+    .sim-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .sim-btn {
+      padding: 2px 8px;
+      font-size: 9px;
+      background: #0c1e32;
+      border: 1px solid #2a4565;
+      color: #7fc9ff;
+      cursor: pointer;
+      border-radius: 2px;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .sim-btn:hover {
+      background: #122840;
+      border-color: #00aaff;
+    }
+
+    .hdg-line {
+      font-size: 9px;
+      color: #9ec4e8;
+      line-height: 1.2;
+    }
+
+    .game-status {
+      font-size: 9px;
+      color: #9ec4e8;
+      min-height: 0;
+      line-height: 1.2;
+    }
+
+    .hint {
+      font-size: 8px;
+      color: #7e93b2;
+      line-height: 1.2;
+    }
+
+    .help-link-wrap {
+      line-height: 1.2;
+    }
+
+    .help-link {
+      font-size: 8px;
+      color: #7fc9ff;
+    }
+
+</style>
+
+    <div id="lgpd-banner" style="position: fixed; bottom: 0; left: 0; right: 0; background: #0d1b2e; border-top: 2px solid #00aaff; padding: 12px 20px; display: flex; align-items: center; gap: 14px; z-index: 9999; font-size: 11px; color: #b8cce8;">
+      <p style="flex: 1; line-height: 1.5;">
+        <strong>Privacidade & Cookies</strong> &mdash; Este simulador coleta dados anônimos de acesso (navegador, resolução, duração da sessão) para fins estatísticos, conforme a <strong>LGPD (Lei 13.709/18)</strong>. Nenhum dado pessoal identificado é registrado. <a href="mailto:lcavamura@gmail.com" style="color: #7fc9ff;">Contato do responsável</a>.
+      </p>
+      <button id="lgpd-aceitar" class="lgpd-btn" type="button">Aceitar</button>
+      <button id="lgpd-recusar" class="lgpd-btn recusar" type="button">Recusar</button>
+    </div>
+
+    <div id="sim">
+      <div id="sec-a">
+        <div id="map-bg"><iframe id="gmFrame" title="Mapa" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+        <canvas id="cMap"></canvas>
+        <div class="slbl" id="lbl-a">A</div>
+        <div id="joystick-wrap">
+          <canvas id="cJoystick" width="160" height="160"></canvas>
+          <div id="joystick-knob"></div>
+        </div>
+      </div>
+
+      <div id="sec-b">
+        <canvas id="cCockpit"></canvas>
+        <div class="slbl" id="lbl-b">B</div>
+      </div>
+
+      <div id="sec-c">
+        <div class="slbl" id="lbl-c">C</div>
+        <details class="cfg-panel">
+          <summary>Configuracao da simulacao</summary>
+          <label>
+            <input id="cfg-show-trail" type="checkbox" />
+            Mostrar trajetória
+          </label>
+          <label>
+            <input id="cfg-hide-aircraft-vors" type="checkbox" />
+            Esconder aeronave e VORs
+          </label>
+          <label>
+            <input id="cfg-gmap" type="checkbox" />
+            Google Maps como fundo
+          </label>
+          <label id="lbl-sat">
+            <input id="cfg-map-sat" type="checkbox" checked disabled />
+            Satélite
+          </label>
+          <label id="lbl-query">
+            Localização:
+            <input id="cfg-map-query" type="text" value="Campinas, Brasil" disabled />
+          </label>
+          <label id="lbl-zoom">
+            Zoom:
+            <input id="cfg-map-zoom" type="number" min="1" max="20" value="13" disabled />
+          </label>
+          <label>
+            URL de Log:
+            <input id="cfg-script-url" type="text" placeholder="(opcional)" />
+          </label>
+          <div style="display: flex; gap: 5px;">
+            <button class="cfg-btn" id="cfg-apply" type="button">Aplicar</button>
+            <button class="cfg-btn" id="cfg-reset" type="button">Reiniciar</button>
+          </div>
+        </details>
+        <div class="instr-row">
+          <canvas id="g-rmi" width="160" height="160"></canvas>
+          <div class="nav-stack">
+            <div class="nav-card">
+              <div class="nav-title">Piloto Automatico</div>
+              <button id="ap-toggle" type="button">AP OFF</button>
+            </div>
+            <div class="nav-card">
+              <label>Indicador de direcao / Proa (graus)</label>
+              <div class="heading-wrap">
+                <canvas id="g-hdg" width="120" height="120"></canvas>
+                <button id="heading-knob" type="button" title="Ajuste com o wheel do mouse"></button>
+              </div>
+              <div class="nav-readout" id="heading-bug-value">Selecionado: 000°</div>
+            </div>
+            <div class="nav-card">
+              <label for="nav-freq">NAV (frequencia VOR)</label>
+              <div class="nav-line">
+                <select id="nav-freq">
+                  <option value="">Sem sintonia</option>
+                </select>
+                <button class="cfg-btn" id="nav-tune" type="button">Sintonizar</button>
+              </div>
+          <div class="nav-readout" id="nav-active-vor">VOR: nenhum</div>
+          <div class="nav-readout" id="nav-dme">DME: --- NM</div>
+          <div class="nav-readout" id="nav-radial-course">R: --- / CRS: ---</div>
+        </div>
+      </div>
+    </div>
+    <div class="hdg-line" id="v-hdg">HDG atual: 000°</div>
+    <div class="game-status" id="v-status"></div>
+    <div class="ctrl-row">
+      <button class="btn" id="bLeft"  title="Curvar Esquerda 15°">&#8592;</button>
+      <button class="btn" id="bUp"    title="Aumentar Velocidade">&#8593;</button>
+      <button class="btn" id="bDown"  title="Reduzir Velocidade">&#8595;</button>
+      <button class="btn" id="bRight" title="Curvar Direita 15°">&#8594;</button>
+    </div>
+    <div class="sim-actions">
+      <button class="sim-btn" id="bPause" type="button">Pause</button>
+      <button class="sim-btn" id="bResetSim" type="button">Reset</button>
+    </div>
+    <div class="hint">Teclado: ← ↑ → (↓ reduz velocidade), P pausa, H ajuda.</div>
+    <div class="help-link-wrap">
+      <a class="help-link" href="ajuda.html" target="_blank" rel="noopener noreferrer">Ajuda / Manual</a>
+    </div>
+  </div>
+
+  <div id="copyright">
+    &copy; 2026 L. Cavamura Jr. &mdash; Todos os direitos reservados.<br>
+    lcavamura@gmail.com
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+let config = {
+  showTrail: false,
+  useGoogleMap: false,
+  mapSatellite: true,
+  mapQuery: 'Campinas, Brasil',
+  mapZoom: 13,
+  scriptUrl: '',
+  hideAircraftAndVors: false,
+};
+
+// ── Rastreamento de sessão ──────────────────────────────────
+const session = {
+  inicio: Date.now(),
+  consentido: null,    // true | false | null (ainda não respondeu)
+  enviado: false,
+};
+
+const ac = {
+  x: 320,
+  y: 320,
+  hdg: 0,
+  speed: 30,
+  bank: 0,
+};
+
+const BASE_MIN_SPEED = 60;
+const MIN_SPEED_PERCENT = 50;
+const MIN_SPEED = BASE_MIN_SPEED * (MIN_SPEED_PERCENT / 100);
+const MAX_SPEED = 400;
+const MAX_BANK = 70;
+const TURN_GAIN = 0.45;
+const AP_MAX_BANK = 25;
+const MAX_VORS = 3;
+const VOR_EDGE_MARGIN = 85;
+const VOR_MIN_SEPARATION = 160;
+const AIRCRAFT_RESET_MARGIN = 18;
+const FLYOVER_THRESHOLD = 30;  // px do centro do VOR para disparar flyover
+const FLYOVER_SHOW_MS = 4000;  // ms para manter o VOR visível após flyover
+const DME_NM_PER_PX = 0.08;
+const PLANE_SCALE = 0.5;
+const PLANE_BODY_HIT_RADIUS = 30;
+const PLANE_ROTATE_HANDLE_DIST = 24;
+const PLANE_ROTATE_HIT_RADIUS = 18;
+const VOR_HIT_RADIUS = 30;
+
+let worldW = 0;
+let worldH = 0;
+let vors = [];
+let selectedVor = null;
+let trail = [];
+let gameOver = false;
+let isPaused = false;
+let apEnabled = false;
+let autoRetuneTimer = null;
+let headingBug = 0;
+let headingBugDisplay = 0;
+let cockpitBankDisplay = 0;
+const headingKnobState = {
+  dragging: false,
+  pointerId: null,
+};
+const aircraftInteraction = {
+  active: false,
+  mode: '',
+  pointerId: null,
+  dragOffsetX: 0,
+  dragOffsetY: 0,
+};
+const vorInteraction = {
+  active: false,
+  vorIndex: -1,
+  pointerId: null,
+  dragOffsetX: 0,
+  dragOffsetY: 0,
+};
+
+const cMap = document.getElementById('cMap');
+const ctxM = cMap.getContext('2d');
+const cCockpit = document.getElementById('cCockpit');
+const ctxC = cCockpit.getContext('2d');
+const statusEl = document.getElementById('v-status');
+const cfgShowTrailEl = document.getElementById('cfg-show-trail');
+const cfgHideAircraftVorsEl = document.getElementById('cfg-hide-aircraft-vors');
+const cfgGmapEl = document.getElementById('cfg-gmap');
+const cfgMapSatelliteEl = document.getElementById('cfg-map-sat');
+const cfgMapQueryEl = document.getElementById('cfg-map-query');
+const cfgMapZoomEl  = document.getElementById('cfg-map-zoom');
+const cfgScriptUrlEl = document.getElementById('cfg-script-url');
+const cfgApplyBtn = document.getElementById('cfg-apply');
+const cfgResetBtn = document.getElementById('cfg-reset');
+const pauseBtn = document.getElementById('bPause');
+const resetSimBtn = document.getElementById('bResetSim');
+const rmiCtx = document.getElementById('g-rmi').getContext('2d');
+const hdgCtx = document.getElementById('g-hdg').getContext('2d');
+const apToggleBtn = document.getElementById('ap-toggle');
+const headingKnobEl = document.getElementById('heading-knob');
+const headingBugValueEl = document.getElementById('heading-bug-value');
+const navFreqEl = document.getElementById('nav-freq');
+const navTuneBtn = document.getElementById('nav-tune');
+const navActiveVorEl = document.getElementById('nav-active-vor');
+const navDmeEl = document.getElementById('nav-dme');
+const navRadialCourseEl = document.getElementById('nav-radial-course');
+
+function parseNumber(value, fallback, min, max) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(min, Math.min(max, n));
+}
+
+function readConfigFromPanel() {
+  return {
+    showTrail: cfgShowTrailEl.checked,
+    useGoogleMap: cfgGmapEl.checked,
+    mapSatellite: cfgMapSatelliteEl.checked,
+    mapQuery: (cfgMapQueryEl.value || 'Campinas, Brasil').trim(),
+    mapZoom: parseNumber(cfgMapZoomEl.value, 13, 1, 20),
+    scriptUrl: cfgScriptUrlEl.value.trim(),
+    hideAircraftAndVors: cfgHideAircraftVorsEl.checked,
+  };
+}
+
+function syncPanelFromConfig() {
+  cfgShowTrailEl.checked = config.showTrail;
+  cfgHideAircraftVorsEl.checked = config.hideAircraftAndVors;
+  cfgGmapEl.checked = config.useGoogleMap;
+  cfgMapSatelliteEl.checked = config.mapSatellite;
+  cfgMapQueryEl.value = config.mapQuery;
+  cfgMapZoomEl.value = String(config.mapZoom);
+  cfgScriptUrlEl.value = config.scriptUrl;
+}
+
+function applyConfig(shouldResetFlight) {
+  config = readConfigFromPanel();
+  setupMapBackground();
+  generateVors();
+
+  if (shouldResetFlight) {
+    ac.x = worldW / 2;
+    ac.y = worldH / 2;
+    ac.hdg = 0;
+    ac.bank = 0;
+    ac.speed = MIN_SPEED;
+    gameOver = false;
+    trail = [];
+    headingBug = ac.hdg;
+    headingKnobEl.style.transform = 'rotate(' + headingBug + 'deg)';
+    updateHeadingBugReadout();
+  }
+}
+
+function resetSimulation() {
+  // Envia dados da sessão anterior antes de reiniciar
+  enviarLog('reset');
+  applyConfig(true);
+  // Reinicia rastreamento
+  session.inicio = Date.now();
+  session.enviado = false;
+  isPaused = false;
+  pauseBtn.textContent = 'Pause';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LGPD — Consentimento
+// ═══════════════════════════════════════════════════════════
+function initLgpd() {
+  const stored = localStorage.getItem('glider_lgpd');
+  if (stored !== null) {
+    session.consentido = stored === '1';
+    document.getElementById('lgpd-banner').style.display = 'none';
+    if (session.consentido) enviarLog('acesso');
+    return;
+  }
+  document.getElementById('lgpd-aceitar').addEventListener('click', () => {
+    localStorage.setItem('glider_lgpd', '1');
+    session.consentido = true;
+    document.getElementById('lgpd-banner').style.display = 'none';
+    enviarLog('acesso');
+  });
+  document.getElementById('lgpd-recusar').addEventListener('click', () => {
+    localStorage.setItem('glider_lgpd', '0');
+    session.consentido = false;
+    document.getElementById('lgpd-banner').style.display = 'none';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+//  COLETA E ENVIO DE DADOS
+// ═══════════════════════════════════════════════════════════
+function detectarNavegador() {
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua))    return 'Edge';
+  if (/Chrome\//.test(ua)) return 'Chrome';
+  if (/Firefox\//.test(ua)) return 'Firefox';
+  if (/Safari\//.test(ua)) return 'Safari';
+  if (/OPR\/|Opera\//.test(ua)) return 'Opera';
+  return 'Outro';
+}
+
+function detectarSO() {
+  const ua = navigator.userAgent;
+  if (/Windows NT 10/.test(ua)) return 'Windows 10/11';
+  if (/Windows/.test(ua)) return 'Windows';
+  if (/Mac OS X/.test(ua)) return 'macOS';
+  if (/Android/.test(ua)) return 'Android';
+  if (/iPhone|iPad/.test(ua)) return 'iOS';
+  if (/Linux/.test(ua)) return 'Linux';
+  return 'Outro';
+}
+
+function enviarLog(evento) {
+  if (!session.consentido) return;
+  const url = config.scriptUrl || cfgScriptUrlEl.value.trim();
+  if (!url) return;
+
+  const payload = {
+    evento,
+    navegador:     detectarNavegador(),
+    so:            detectarSO(),
+    resolucao:     screen.width + 'x' + screen.height,
+    duracao_seg:   0,
+    tempo_voo_seg: 0,
+    altitude_max:  0,
+    ip_anon:       '',
+    consentimento: 'sim',
+  };
+
+  // Tenta obter IP anonimizado (apenas 3 primeiros octetos)
+  fetch('https://api.ipify.org?format=json', { cache: 'no-store' })
+    .then(r => r.json())
+    .then(d => {
+      const partes = (d.ip || '').split('.');
+      if (partes.length === 4) payload.ip_anon = partes[0]+'.'+partes[1]+'.'+partes[2]+'.xxx';
+    })
+    .catch(() => {})
+    .finally(() => {
+      const options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      };
+      if (url.includes('script.google.com')) {
+        options.mode = 'no-cors';
+      }
+      fetch(url, options).catch(() => {});
+    });
+}
+
+function setupMapBackground() {
+  const mapBg = document.getElementById('map-bg');
+  const gmFrame = document.getElementById('gmFrame');
+  if (!config.useGoogleMap) {
+    mapBg.style.display = 'none';
+    gmFrame.src = '';
+    return;
+  }
+  mapBg.style.display = 'block';
+  const q = encodeURIComponent(config.mapQuery);
+  const layer = config.mapSatellite ? 'k' : 'm';
+  gmFrame.src = 'https://www.google.com/maps?q=' + q + '&t=' + layer + '&z=' + config.mapZoom + '&output=embed';
+}
+
+function enforceAreaCLayout() {
+  const secC = document.getElementById('sec-c');
+  const instrRow = secC ? secC.querySelector('.instr-row') : null;
+  const navStack = secC ? secC.querySelector('.nav-stack') : null;
+  const headingWrap = secC ? secC.querySelector('.heading-wrap') : null;
+  const rmiCanvas = document.getElementById('g-rmi');
+  if (!secC || !instrRow || !navStack || !headingWrap || !rmiCanvas) return;
+
+  secC.style.overflowX = 'hidden';
+  secC.style.overflowY = 'auto';
+  secC.style.zIndex = '2';
+
+  instrRow.style.display = 'flex';
+  instrRow.style.gap = '8px';
+  instrRow.style.alignItems = 'flex-start';
+  instrRow.style.flexWrap = 'nowrap';
+
+  navStack.style.flex = '1 1 auto';
+  navStack.style.minWidth = '0';
+
+  headingWrap.style.display = 'flex';
+  headingWrap.style.alignItems = 'center';
+  headingWrap.style.gap = '8px';
+  headingWrap.style.flexWrap = 'nowrap';
+
+  headingKnobEl.style.display = 'inline-block';
+  headingKnobEl.style.visibility = 'visible';
+  headingKnobEl.style.flex = '0 0 34px';
+  headingKnobEl.style.minWidth = '34px';
+  headingKnobEl.style.minHeight = '34px';
+
+  const compact = secC.clientWidth < 430;
+  if (compact) {
+    instrRow.style.flexDirection = 'column';
+    navStack.style.width = '100%';
+    rmiCanvas.style.alignSelf = 'center';
+  } else {
+    instrRow.style.flexDirection = 'row';
+    navStack.style.width = '';
+    rmiCanvas.style.alignSelf = '';
+  }
+}
+
+function resize() {
+  const a = document.getElementById('sec-a');
+  const b = document.getElementById('sec-b');
+  cMap.width = a.clientWidth;
+  cMap.height = a.clientHeight;
+  cCockpit.width = b.clientWidth;
+  cCockpit.height = b.clientHeight;
+
+  worldW = cMap.width;
+  worldH = cMap.height;
+  ac.x = Math.max(0, Math.min(worldW, ac.x));
+  ac.y = Math.max(0, Math.min(worldH, ac.y));
+
+  generateVors();
+  enforceAreaCLayout();
+}
+window.addEventListener('resize', resize);
+
+cfgApplyBtn.addEventListener('click', () => {
+  applyConfig(false);
+});
+
+cfgResetBtn.addEventListener('click', () => {
+  resetSimulation();
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (gameOver) return;
+  isPaused = !isPaused;
+  pauseBtn.textContent = isPaused ? 'Retomar' : 'Pause';
+});
+
+resetSimBtn.addEventListener('click', () => {
+  resetSimulation();
+});
+
+cfgGmapEl.addEventListener('change', () => {
+  const enabled = cfgGmapEl.checked;
+  cfgMapSatelliteEl.disabled = !enabled;
+  cfgMapQueryEl.disabled = !enabled;
+  cfgMapZoomEl.disabled = !enabled;
+});
+
+function random(min, max) {
+  return min + Math.random() * (max - min);
+}
+
+function normalizeHeading(value) {
+  return ((value % 360) + 360) % 360;
+}
+
+function headingError(target, current) {
+  return ((target - current + 540) % 360) - 180;
+}
+
+function randomVorFrequency(usedFrequencies) {
+  const minStep = 0;
+  const maxStep = Math.floor((117.95 - 108) / 0.05);
+  for (let i = 0; i < 80; i++) {
+    const step = Math.floor(random(minStep, maxStep + 1));
+    const freq = (108 + step * 0.05).toFixed(2);
+    if (!usedFrequencies.has(freq)) return freq;
+  }
+  return '113.00';
+}
+
+function updateNavFrequencyOptions() {
+  const selectedFreq = selectedVor ? String(selectedVor.freq) : '';
+  navFreqEl.innerHTML = '';
+
+  const noTuneOption = document.createElement('option');
+  noTuneOption.value = '';
+  noTuneOption.textContent = 'Sem sintonia';
+  navFreqEl.appendChild(noTuneOption);
+
+  const sortedVors = vors
+    .slice()
+    .sort((a, b) => Number(a.freq) - Number(b.freq));
+
+  for (let i = 0; i < sortedVors.length; i++) {
+    const vor = sortedVors[i];
+    const option = document.createElement('option');
+    option.value = String(vor.freq);
+    option.textContent = vor.name + ' (' + vor.freq + ')';
+    navFreqEl.appendChild(option);
+  }
+
+  navFreqEl.value = selectedFreq;
+  if (navFreqEl.value !== selectedFreq) {
+    navFreqEl.value = '';
+  }
+}
+
+function generateVors() {
+  vors = [];
+  if (autoRetuneTimer) { clearTimeout(autoRetuneTimer); autoRetuneTimer = null; }
+  if (worldW < 120 || worldH < 120) {
+    selectedVor = null;
+    updateNavFrequencyOptions();
+    return;
+  }
+
+  const count = Math.floor(random(1, MAX_VORS + 1));
+  const freqs = new Set();
+  const margin = Math.min(VOR_EDGE_MARGIN, Math.max(40, Math.min(worldW, worldH) / 4));
+
+  for (let i = 0; i < count; i++) {
+    let placed = false;
+    for (let attempt = 0; attempt < 60; attempt++) {
+      const x = random(margin, worldW - margin);
+      const y = random(margin, worldH - margin);
+      const tooClose = vors.some(v => Math.hypot(v.x - x, v.y - y) < VOR_MIN_SEPARATION);
+      if (tooClose) continue;
+
+      const freq = randomVorFrequency(freqs);
+      freqs.add(freq);
+      vors.push({
+        id: i + 1,
+        name: 'VOR ' + String.fromCharCode(65 + i),
+        freq,
+        x,
+        y,
+      });
+      placed = true;
+      break;
+    }
+    if (!placed) break;
+  }
+
+  if (selectedVor) {
+    selectedVor = vors.find(v => v.freq === selectedVor.freq) || null;
+  }
+
+  updateNavFrequencyOptions();
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getMapPointerPosition(evt) {
+  const rect = cMap.getBoundingClientRect();
+  const scaleX = cMap.width / rect.width;
+  const scaleY = cMap.height / rect.height;
+  return {
+    x: (evt.clientX - rect.left) * scaleX,
+    y: (evt.clientY - rect.top) * scaleY,
+  };
+}
+
+function getRotateHandlePosition() {
+  const angle = (ac.hdg - 90) * Math.PI / 180;
+  return {
+    x: ac.x + Math.cos(angle) * PLANE_ROTATE_HANDLE_DIST,
+    y: ac.y + Math.sin(angle) * PLANE_ROTATE_HANDLE_DIST,
+  };
+}
+
+function beginTrailBreak() {
+  if (!trail.length) return;
+  const lastPoint = trail[trail.length - 1];
+  if (lastPoint.breakLine) return;
+  trail.push({ breakLine: true });
+}
+
+function isPointNearPlaneBody(x, y) {
+  return Math.hypot(x - ac.x, y - ac.y) <= PLANE_BODY_HIT_RADIUS;
+}
+
+function isPointNearRotateHandle(x, y) {
+  const handle = getRotateHandlePosition();
+  return Math.hypot(x - handle.x, y - handle.y) <= PLANE_ROTATE_HIT_RADIUS;
+}
+
+function findVorNearPoint(x, y) {
+  for (let i = 0; i < vors.length; i++) {
+    if (Math.hypot(x - vors[i].x, y - vors[i].y) <= VOR_HIT_RADIUS) return i;
+  }
+  return -1;
+}
+
+function updateAircraftHeadingFromPoint(x, y) {
+  const dx = x - ac.x;
+  const dy = y - ac.y;
+  if (Math.hypot(dx, dy) < 4) return;
+  ac.hdg = normalizeHeading(Math.atan2(dy, dx) * 180 / Math.PI + 90);
+}
+
+function drawPlaneManipulator(ctx, x, y, hdg) {
+  const handle = getRotateHandlePosition();
+  const isActive = aircraftInteraction.active;
+
+  ctx.save();
+  ctx.strokeStyle = isActive ? 'rgba(255,224,122,0.95)' : 'rgba(255,224,122,0.5)';
+  ctx.fillStyle = isActive ? 'rgba(255,224,122,0.95)' : 'rgba(255,224,122,0.72)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath();
+  ctx.arc(x, y, 16, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(handle.x, handle.y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(handle.x, handle.y, 9, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(handle.x, handle.y, 12, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = 'rgba(255,255,255,0.82)';
+  ctx.font = '9px Courier New';
+  ctx.textAlign = 'left';
+  ctx.fillText('drag', x + 16, y + 20);
+  ctx.fillText('rota', handle.x + 10, handle.y + 3);
+  ctx.restore();
+}
+
+function drawMap() {
+  const W = cMap.width;
+  const H = cMap.height;
+  if (!W || !H) return;
+
+  ctxM.clearRect(0, 0, W, H);
+
+  if (!config.useGoogleMap) {
+    ctxM.fillStyle = '#152238';
+    ctxM.fillRect(0, 0, W, H);
+  }
+
+  ctxM.strokeStyle = 'rgba(255,255,255,0.12)';
+  ctxM.lineWidth = 1;
+  const gs = 70;
+  for (let gx = 0; gx <= W; gx += gs) {
+    ctxM.beginPath();
+    ctxM.moveTo(gx, 0);
+    ctxM.lineTo(gx, H);
+    ctxM.stroke();
+  }
+  for (let gy = 0; gy <= H; gy += gs) {
+    ctxM.beginPath();
+    ctxM.moveTo(0, gy);
+    ctxM.lineTo(W, gy);
+    ctxM.stroke();
+  }
+
+  if (config.showTrail && trail.length > 1) {
+    ctxM.strokeStyle = '#ff00d4';
+    ctxM.lineWidth = 2;
+    ctxM.beginPath();
+    for (let i = 0; i < trail.length; i++) {
+      const p = trail[i];
+      if (i === 0) ctxM.moveTo(p.x, p.y);
+      else ctxM.lineTo(p.x, p.y);
+    }
+    ctxM.stroke();
+  }
+
+  drawVors();
+  if (!config.hideAircraftAndVors) {
+    drawPlane(ctxM, ac.x, ac.y, ac.hdg, PLANE_SCALE);
+    drawPlaneManipulator(ctxM, ac.x, ac.y, ac.hdg);
+  }
+
+  drawCompass(ctxM, 92, 52, ac.hdg);
+
+  ctxM.fillStyle = 'rgba(0,0,0,0.55)';
+  ctxM.fillRect(W - 150, 4, 146, 18);
+  ctxM.fillStyle = '#f0f0f0';
+  ctxM.font = '10px Courier New';
+  ctxM.textAlign = 'right';
+  ctxM.fillText('X:' + Math.round(ac.x) + ' Y:' + Math.round(ac.y), W - 6, 16);
+
+  if (gameOver) {
+    ctxM.fillStyle = 'rgba(0,0,0,0.65)';
+    ctxM.fillRect(0, 0, W, H);
+    ctxM.fillStyle = '#ff4444';
+    ctxM.font = 'bold 34px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.fillText('FIM DA SIMULACAO', W / 2, H / 2 - 8);
+    ctxM.fillStyle = '#ffd066';
+    ctxM.font = '14px Courier New';
+    ctxM.fillText('Simulacao finalizada', W / 2, H / 2 + 20);
+  } else if (isPaused) {
+    ctxM.fillStyle = 'rgba(0,0,0,0.5)';
+    ctxM.fillRect(0, 0, W, H);
+    ctxM.fillStyle = '#ffe27a';
+    ctxM.font = 'bold 30px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.fillText('PAUSADO', W / 2, H / 2 - 2);
+  }
+}
+
+function drawVors() {
+  for (let i = 0; i < vors.length; i++) {
+    const vor = vors[i];
+    const selected = selectedVor && selectedVor.freq === vor.freq;
+    const distToAc = Math.hypot(ac.x - vor.x, ac.y - vor.y);
+    const isNearAircraft = distToAc < 50;
+    const flyoverElapsed = Date.now() - (vor.lastFlyover || 0);
+    const isFlyoverVisible = flyoverElapsed < FLYOVER_SHOW_MS;
+
+    // Em modo invisível, mostrar apenas o VOR sintonizado quando a aeronave está próxima ou passou sobre ele
+    if (config.hideAircraftAndVors) {
+      if (!selected) continue;
+      if (!isNearAircraft && !isFlyoverVisible) continue;
+    }
+
+    ctxM.save();
+    ctxM.translate(vor.x, vor.y);
+
+    // Transferidor de radiais (0-359) ao redor de cada VOR.
+    const radialR = selected ? 74 : 66;
+    const radialInner = 20;
+    ctxM.strokeStyle = selected ? 'rgba(255,226,122,0.55)' : 'rgba(155,198,235,0.38)';
+    ctxM.lineWidth = 1;
+    ctxM.beginPath();
+    ctxM.arc(0, 0, radialR, 0, Math.PI * 2);
+    ctxM.stroke();
+
+    ctxM.font = '7px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.textBaseline = 'middle';
+    for (let deg = 0; deg < 360; deg += 10) {
+      const rad = (deg - 90) * Math.PI / 180;
+      const longTick = deg % 30 === 0;
+      const inner = radialR - (longTick ? 7 : 4);
+      ctxM.strokeStyle = selected
+        ? (longTick ? 'rgba(255,226,122,0.8)' : 'rgba(255,226,122,0.45)')
+        : (longTick ? 'rgba(155,198,235,0.65)' : 'rgba(155,198,235,0.35)');
+      ctxM.beginPath();
+      ctxM.moveTo(Math.cos(rad) * inner, Math.sin(rad) * inner);
+      ctxM.lineTo(Math.cos(rad) * radialR, Math.sin(rad) * radialR);
+      ctxM.stroke();
+
+      // Linha radial em direcao ao simbolo do VOR.
+      ctxM.strokeStyle = selected ? 'rgba(255,226,122,0.22)' : 'rgba(155,198,235,0.18)';
+      ctxM.lineWidth = longTick ? 0.9 : 0.6;
+      ctxM.beginPath();
+      ctxM.moveTo(Math.cos(rad) * (radialInner + 2), Math.sin(rad) * (radialInner + 2));
+      ctxM.lineTo(Math.cos(rad) * (radialR - 9), Math.sin(rad) * (radialR - 9));
+      ctxM.stroke();
+
+      const labelR = radialR + (longTick ? 10 : 8);
+      const label = String(deg).padStart(3, '0');
+      ctxM.fillStyle = selected
+        ? (longTick ? 'rgba(255,226,122,0.92)' : 'rgba(255,226,122,0.72)')
+        : (longTick ? 'rgba(210,235,255,0.85)' : 'rgba(210,235,255,0.62)');
+      ctxM.fillText(label, Math.cos(rad) * labelR, Math.sin(rad) * labelR);
+    }
+
+    if (selected) {
+      const vec = getVorRelativeVector(vor);
+      if (vec) {
+        const bearingToVor = normalizeHeading(Math.atan2(vec.dx, -vec.dy) * 180 / Math.PI);
+        const radialDeg = normalizeHeading(bearingToVor + 180);
+        const courseDeg = normalizeHeading(radialDeg + 180);
+
+        const radialRad = (radialDeg - 90) * Math.PI / 180;
+        const courseRad = (courseDeg - 90) * Math.PI / 180;
+
+        // Linha da radial (do VOR para a aeronave).
+        ctxM.strokeStyle = '#ffb347';
+        ctxM.lineWidth = 2;
+        ctxM.beginPath();
+        ctxM.moveTo(0, 0);
+        ctxM.lineTo(Math.cos(radialRad) * (radialR - 2), Math.sin(radialRad) * (radialR - 2));
+        ctxM.stroke();
+
+        // Linha do curso recíproco (ângulo oposto da radial).
+        ctxM.strokeStyle = 'rgba(255,179,71,0.85)';
+        ctxM.setLineDash([4, 3]);
+        ctxM.lineWidth = 1.5;
+        ctxM.beginPath();
+        ctxM.moveTo(0, 0);
+        ctxM.lineTo(Math.cos(courseRad) * (radialR - 2), Math.sin(courseRad) * (radialR - 2));
+        ctxM.stroke();
+        ctxM.setLineDash([]);
+      }
+    }
+
+    // Em modo invisível, mostrar em verde quando aeronave está sobre; laranja ao passar
+    if (config.hideAircraftAndVors && isNearAircraft) {
+      ctxM.strokeStyle = '#00ff00';
+      ctxM.fillStyle = 'rgba(0,255,0,0.2)';
+      ctxM.lineWidth = 3;
+    } else if (config.hideAircraftAndVors && isFlyoverVisible) {
+      const a = (1 - flyoverElapsed / FLYOVER_SHOW_MS).toFixed(2);
+      ctxM.strokeStyle = `rgba(255,180,50,${(0.85 * a).toFixed(2)})`;
+      ctxM.fillStyle = `rgba(255,180,50,${(0.18 * a).toFixed(2)})`;
+      ctxM.lineWidth = 2;
+    } else {
+      ctxM.strokeStyle = selected ? '#ffe27a' : '#8fd4ff';
+      ctxM.fillStyle = selected ? 'rgba(255,226,122,0.18)' : 'rgba(143,212,255,0.12)';
+      ctxM.lineWidth = selected ? 2.4 : 1.8;
+    }
+
+    ctxM.beginPath();
+    for (let p = 0; p < 6; p++) {
+      const a = -Math.PI / 2 + p * (Math.PI / 3);
+      const px = Math.cos(a) * 15;
+      const py = Math.sin(a) * 15;
+      if (p === 0) ctxM.moveTo(px, py);
+      else ctxM.lineTo(px, py);
+    }
+    ctxM.closePath();
+    ctxM.fill();
+    ctxM.stroke();
+
+    ctxM.beginPath();
+    ctxM.moveTo(-12, 0);
+    ctxM.lineTo(12, 0);
+    ctxM.moveTo(0, -12);
+    ctxM.lineTo(0, 12);
+    ctxM.stroke();
+
+    ctxM.fillStyle = selected ? '#ffe27a' : '#d9efff';
+    ctxM.font = 'bold 10px Courier New';
+    ctxM.textAlign = 'center';
+    ctxM.fillText(vor.name, 0, -20);
+    ctxM.fillText(vor.freq, 0, 27);
+
+    // Indicador de arraste (quando este VOR está sendo arrastado)
+    const isDragging = vorInteraction.active && vorInteraction.vorIndex === i;
+    const dragAlpha = isDragging ? 0.95 : 0.45;
+    ctxM.strokeStyle = `rgba(100,200,255,${dragAlpha})`;
+    ctxM.fillStyle = `rgba(100,200,255,${isDragging ? 0.95 : 0.65})`;
+    ctxM.lineWidth = 1.5;
+    ctxM.setLineDash([4, 3]);
+    ctxM.beginPath();
+    ctxM.arc(0, 0, 22, 0, Math.PI * 2);
+    ctxM.stroke();
+    ctxM.setLineDash([]);
+    ctxM.font = '9px Courier New';
+    ctxM.fillText('drag', 26, 4);
+
+    ctxM.restore();
+  }
+}
+
+function drawPlane(ctx, x, y, hdg, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.rotate(hdg * Math.PI / 180);
+
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(0, 14);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(-6, -5);
+  ctx.lineTo(6, -5);
+  ctx.lineTo(22, 0);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-10, 14);
+  ctx.lineTo(10, 14);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -18);
+  ctx.lineTo(0, 14);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-22, 0);
+  ctx.lineTo(-6, -5);
+  ctx.lineTo(6, -5);
+  ctx.lineTo(22, 0);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-10, 14);
+  ctx.lineTo(10, 14);
+  ctx.stroke();
+
+  ctx.fillStyle = '#ff3b30';
+  ctx.beginPath();
+  ctx.arc(0, -18, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCompass(ctx, x, y, hdg) {
+  const r = 32;
+  ctx.save();
+  ctx.translate(x, y);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.52)';
+  ctx.beginPath(); ctx.arc(0, 0, r+3, 0, Math.PI*2); ctx.fill();
+
+  ctx.strokeStyle = '#999';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2); ctx.stroke();
+
+  ctx.font = 'bold 9px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [['N',0],['E',90],['S',180],['W',270]].forEach(([lbl, ang]) => {
+    const rad = (ang - 90) * Math.PI / 180;
+    ctx.fillStyle = lbl === 'N' ? '#ff5555' : '#cccccc';
+    ctx.fillText(lbl, Math.cos(rad)*(r-10), Math.sin(rad)*(r-10));
+  });
+
+  // Ponteiro de rumo
+  ctx.save();
+  ctx.rotate((hdg - 90) * Math.PI / 180);
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(0, -(r-4));
+  ctx.lineTo(-4, -(r-15));
+  ctx.lineTo(4, -(r-15));
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DESENHO DO COCKPIT / HORIZONTE ARTIFICIAL (Seção B)
+// ═══════════════════════════════════════════════════════════
+function drawCockpit() {
+  const W = cCockpit.width, H = cCockpit.height;
+  if (!W || !H) return;
+  const ctx = ctxC;
+  ctx.clearRect(0, 0, W, H);
+
+  // ── Horizonte (rotaciona com o bank) ──
+  ctx.save();
+  const bankDisplay = clamp(cockpitBankDisplay, -80, 80);
+  ctx.translate(W/2, H/2);
+  ctx.rotate(bankDisplay * Math.PI / 180);
+
+  const ext = Math.max(W, H) * 1.6;
+
+  // Céu
+  const sky = ctx.createLinearGradient(0, -ext, 0, 0);
+  sky.addColorStop(0, '#062240');
+  sky.addColorStop(1, '#1464a8');
+  ctx.fillStyle = sky;
+  ctx.fillRect(-ext, -ext, ext*2, ext);
+
+  // Solo
+  const gnd = ctx.createLinearGradient(0, 0, 0, ext);
+  gnd.addColorStop(0, '#5a3208');
+  gnd.addColorStop(1, '#271600');
+  ctx.fillStyle = gnd;
+  ctx.fillRect(-ext, 0, ext*2, ext);
+
+  // Linha de horizonte vermelha
+  ctx.strokeStyle = '#ff2222';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-ext, 0); ctx.lineTo(ext, 0); ctx.stroke();
+
+  // Linhas de pitch (±5°, ±10°, ±15°, ±20°, ±30°)
+  const pxPerDeg = H / 40;
+  ctx.lineWidth = 1;
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'left';
+  for (let p = -30; p <= 30; p += 5) {
+    if (p === 0) continue;
+    const py = -p * pxPerDeg;
+    const len = (p % 10 === 0) ? 48 : 24;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.beginPath(); ctx.moveTo(-len, py); ctx.lineTo(len, py); ctx.stroke();
+    if (p % 10 === 0) {
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillText(Math.abs(p) + '°', len + 4, py + 4);
+    }
+  }
+  ctx.restore();
+
+  // ── Overlay fixo (não rotaciona) ──
+  const cx = W/2, cy = H/2;
+
+  // Símbolo de referência da aeronave (asas brancas)
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(cx-64, cy); ctx.lineTo(cx-18, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-18, cy); ctx.lineTo(cx-18, cy+10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+18, cy); ctx.lineTo(cx+64, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+18, cy); ctx.lineTo(cx+18, cy+10); ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI*2); ctx.fill();
+
+  // Arco de ângulo de banco
+  drawBankArc(ctx, cx, cy, Math.min(W, H) * 0.44);
+
+  // Fita de rumo (topo)
+  drawHdgTape(ctx, W, H);
+
+  // Caixas laterais velocidade/altitude
+  drawSideBoxes(ctx, W, H);
+}
+
+function drawBankArc(ctx, cx, cy, r) {
+  ctx.strokeStyle = '#ffcc00';
+  ctx.fillStyle = '#ffcc00';
+  ctx.lineWidth = 1.5;
+  [-70, -60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60, 70].forEach(a => {
+    const rad = (a - 90) * Math.PI / 180;
+    const len = (Math.abs(a) % 30 === 0) ? 13 : 7;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(rad)*r,     cy + Math.sin(rad)*r);
+    ctx.lineTo(cx + Math.cos(rad)*(r-len), cy + Math.sin(rad)*(r-len));
+    ctx.stroke();
+  });
+
+  // Ponteiro de bank
+  const bRad = (cockpitBankDisplay - 90) * Math.PI / 180;
+  ctx.beginPath();
+  ctx.moveTo(cx + Math.cos(bRad)*r,         cy + Math.sin(bRad)*r);
+  ctx.lineTo(cx + Math.cos(bRad+0.1)*(r-16), cy + Math.sin(bRad+0.1)*(r-16));
+  ctx.lineTo(cx + Math.cos(bRad-0.1)*(r-16), cy + Math.sin(bRad-0.1)*(r-16));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawHdgTape(ctx, W, H) {
+  const bW = W * 0.56, bH = 22;
+  const bx = (W - bW) / 2, by = 7;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.58)';
+  ctx.fillRect(bx, by, bW, bH);
+  ctx.strokeStyle = '#666'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx, by, bW, bH);
+
+  ctx.font = '10px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const range = 50;
+  for (let d = -range; d <= range; d += 5) {
+    const h = ((ac.hdg + d) % 360 + 360) % 360;
+    const px = bx + bW/2 + (d / range) * (bW/2);
+    if (px < bx + 2 || px > bx + bW - 2) continue;
+    const tickH = (h % 10 === 0) ? 9 : 5;
+    ctx.strokeStyle = 'rgba(200,200,200,0.65)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(px, by+bH); ctx.lineTo(px, by+bH-tickH); ctx.stroke();
+    if (h % 30 === 0) {
+      ctx.fillStyle = '#ddd';
+      ctx.fillText(String(h).padStart(3,'0'), px, by + 10);
+    }
+  }
+
+  // Seta central (amarela)
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath();
+  ctx.moveTo(bx+bW/2-6, by+bH+1);
+  ctx.lineTo(bx+bW/2+6, by+bH+1);
+  ctx.lineTo(bx+bW/2,   by+bH-7);
+  ctx.closePath(); ctx.fill();
+}
+
+function drawSideBoxes(ctx, W, H) {
+  // Velocidade (esquerda)
+  const boxW = 55, boxH = 56;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(8, H/2-boxH/2, boxW, boxH);
+  ctx.strokeStyle = '#00dd66'; ctx.lineWidth = 1;
+  ctx.strokeRect(8, H/2-boxH/2, boxW, boxH);
+  ctx.fillStyle = '#00dd66';
+  ctx.font = 'bold 15px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(ac.speed, 8+boxW/2, H/2-6);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#88ffbb';
+  ctx.fillText('kt', 8+boxW/2, H/2+12);
+
+  // Altitude (direita)
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.fillRect(W-8-boxW, H/2-boxH/2, boxW, boxH);
+  ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 1;
+  ctx.strokeRect(W-8-boxW, H/2-boxH/2, boxW, boxH);
+  ctx.fillStyle = '#00aaff';
+  ctx.font = 'bold 13px Courier New';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(String(Math.round(ac.hdg)).padStart(3, '0'), W-8-boxW/2, H/2-7);
+  ctx.font = '9px Courier New';
+  ctx.fillStyle = '#88ccff';
+  ctx.fillText('HDG', W-8-boxW/2, H/2+9);
+}
+
+function isWithinAreaA(x, y) {
+  return x >= 0 && x <= worldW && y >= 0 && y <= worldH;
+}
+
+function getVorRelativeVector(vor) {
+  if (worldW <= 0 || worldH <= 0) return null;
+  if (!isWithinAreaA(ac.x, ac.y)) return null;
+  if (!isWithinAreaA(vor.x, vor.y)) return null;
+  return {
+    dx: vor.x - ac.x,
+    dy: vor.y - ac.y,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INSTRUMENTOS NAV (Seção C)
+// ═══════════════════════════════════════════════════════════
+function drawRmi(ctx) {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const r = Math.min(W, H) * 0.43;
+  const heading = normalizeHeading(ac.hdg);
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0b0f1f';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.08, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#6f7c92';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  for (let a = 0; a < 360; a += 5) {
+    const rel = (a - heading) * Math.PI / 180;
+    const inner = r - (a % 30 === 0 ? 14 : 7);
+    const outer = r - 1;
+    ctx.strokeStyle = a % 30 === 0 ? '#d0d8f0' : 'rgba(208,216,240,0.5)';
+    ctx.lineWidth = a % 30 === 0 ? 1.6 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.sin(rel) * inner, cy - Math.cos(rel) * inner);
+    ctx.lineTo(cx + Math.sin(rel) * outer, cy - Math.cos(rel) * outer);
+    ctx.stroke();
+
+    if (a % 30 === 0) {
+      let label = String(a / 10);
+      if (a === 0) label = 'N';
+      if (a === 90) label = 'E';
+      if (a === 180) label = 'S';
+      if (a === 270) label = 'W';
+      ctx.fillStyle = '#dbe7ff';
+      ctx.font = 'bold 12px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, cx + Math.sin(rel) * (r - 24), cy - Math.cos(rel) * (r - 24));
+    }
+  }
+
+  // Lubber line
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r + 2);
+  ctx.lineTo(cx - 7, cy - r + 14);
+  ctx.lineTo(cx + 7, cy - r + 14);
+  ctx.closePath();
+  ctx.fill();
+
+  if (selectedVor) {
+    const vec = getVorRelativeVector(selectedVor);
+    if (vec) {
+      const bearing = normalizeHeading(Math.atan2(vec.dx, -vec.dy) * 180 / Math.PI);
+      const rel = (bearing - heading) * Math.PI / 180;
+      const needleR = r - 24;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(rel);
+      ctx.strokeStyle = '#ff6464';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(0, -needleR);
+      ctx.lineTo(0, needleR * 0.7);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ff6464';
+      ctx.beginPath();
+      ctx.moveTo(0, -needleR - 5);
+      ctx.lineTo(-6, -needleR + 8);
+      ctx.lineTo(6, -needleR + 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // TO/FROM indicator
+      const relBearingDeg = normalizeHeading(bearing - heading + 180) - 180; // -180..180
+      const isTo = Math.abs(relBearingDeg) <= 90;
+      const toFromLabel = isTo ? 'TO' : 'FROM';
+      const toFromColor = isTo ? '#00ff88' : '#ffaa44';
+      const badgeW = isTo ? 28 : 38;
+      const badgeH = 14;
+      const bx = cx - badgeW / 2;
+      const by = cy - badgeH / 2 + r * 0.32;
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillRect(bx - 2, by - 2, badgeW + 4, badgeH + 4);
+      ctx.strokeStyle = toFromColor;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx - 2, by - 2, badgeW + 4, badgeH + 4);
+      ctx.fillStyle = toFromColor;
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(toFromLabel, cx, by + badgeH / 2);
+    }
+  }
+
+  ctx.fillStyle = '#7fc9ff';
+  ctx.font = 'bold 11px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('RMI', cx, cy + r * 0.55);
+}
+
+function drawHeadingIndicator(ctx) {
+  const W = ctx.canvas.width;
+  const H = ctx.canvas.height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const r = Math.min(W, H) * 0.45;
+  const heading = normalizeHeading(ac.hdg);
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#0b0f1f';
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.04, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#6f7c92';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  for (let a = 0; a < 360; a += 5) {
+    const rel = (a - heading) * Math.PI / 180;
+    const inner = r - (a % 30 === 0 ? 11 : 5);
+    const outer = r - 1;
+    ctx.strokeStyle = a % 30 === 0 ? '#d0d8f0' : 'rgba(208,216,240,0.45)';
+    ctx.lineWidth = a % 30 === 0 ? 1.4 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.sin(rel) * inner, cy - Math.cos(rel) * inner);
+    ctx.lineTo(cx + Math.sin(rel) * outer, cy - Math.cos(rel) * outer);
+    ctx.stroke();
+
+    if (a % 30 === 0) {
+      let label = String(a / 10);
+      if (a === 0) label = 'N';
+      if (a === 90) label = 'E';
+      if (a === 180) label = 'S';
+      if (a === 270) label = 'W';
+      ctx.fillStyle = '#dbe7ff';
+      ctx.font = 'bold 10px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, cx + Math.sin(rel) * (r - 18), cy - Math.cos(rel) * (r - 18));
+    }
+  }
+
+  // Lubber line fixa no topo (12h)
+  ctx.fillStyle = '#ffcc00';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - r + 1);
+  ctx.lineTo(cx - 6, cy - r + 11);
+  ctx.lineTo(cx + 6, cy - r + 11);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ponteiro do heading bug
+  const bugRel = (normalizeHeading(headingBugDisplay) - heading) * Math.PI / 180;
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(bugRel);
+  ctx.strokeStyle = '#7fc9ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, -r + 13);
+  ctx.lineTo(0, -r + 28);
+  ctx.stroke();
+  ctx.fillStyle = '#7fc9ff';
+  ctx.beginPath();
+  ctx.moveTo(0, -r + 8);
+  ctx.lineTo(-5, -r + 17);
+  ctx.lineTo(5, -r + 17);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = '#7fc9ff';
+  ctx.font = 'bold 10px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('HDG', cx, cy + r * 0.5);
+}
+
+function updateHeadingBugReadout() {
+  headingBugValueEl.textContent = 'Selecionado: ' + String(Math.round(headingBug)).padStart(3, '0') + '°';
+}
+
+function setHeadingBug(value) {
+  headingBug = normalizeHeading(value);
+  headingKnobEl.style.transform = 'rotate(' + headingBug + 'deg)';
+  updateHeadingBugReadout();
+}
+
+function pointerToHeadingBug(evt) {
+  const rect = headingKnobEl.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = evt.clientX - cx;
+  const dy = evt.clientY - cy;
+  if (Math.hypot(dx, dy) < 3) return;
+  const bug = normalizeHeading(Math.atan2(dx, -dy) * 180 / Math.PI);
+  setHeadingBug(bug);
+}
+
+function tuneNav() {
+  if (autoRetuneTimer) { clearTimeout(autoRetuneTimer); autoRetuneTimer = null; }
+  const tuned = navFreqEl.value;
+  if (!tuned) {
+    selectedVor = null;
+    return;
+  }
+  selectedVor = vors.find(v => String(v.freq) === tuned) || null;
+}
+
+
+function updateNavReadout() {
+  if (!selectedVor) {
+    navActiveVorEl.textContent = 'VOR: nenhum';
+    navDmeEl.textContent = 'DME: --- NM';
+    navRadialCourseEl.textContent = 'R: --- / CRS: ---';
+    return;
+  }
+  const vec = getVorRelativeVector(selectedVor);
+  navActiveVorEl.textContent = 'VOR: ' + selectedVor.name + ' | ' + selectedVor.freq;
+  if (!vec) {
+    navDmeEl.textContent = 'DME: --- NM';
+    navRadialCourseEl.textContent = 'R: --- / CRS: ---';
+    return;
+  }
+  const distPx = Math.hypot(vec.dx, vec.dy);
+  const dme = distPx * DME_NM_PER_PX;
+  const bearingToVor = normalizeHeading(Math.atan2(vec.dx, -vec.dy) * 180 / Math.PI);
+  const radialDeg = normalizeHeading(bearingToVor + 180);
+  const courseDeg = normalizeHeading(radialDeg + 180);
+  navDmeEl.textContent = 'DME: ' + dme.toFixed(1) + ' NM';
+  navRadialCourseEl.textContent =
+    'R-' + String(Math.round(radialDeg)).padStart(3, '0') +
+    ' / CRS-' + String(Math.round(courseDeg)).padStart(3, '0');
+}
+
+function updateHUD() {
+  drawRmi(rmiCtx);
+  drawHeadingIndicator(hdgCtx);
+  document.getElementById('v-hdg').textContent =
+    'HDG atual: ' + String(Math.round(normalizeHeading(ac.hdg))).padStart(3, '0') + '°';
+
+  statusEl.textContent = isPaused
+    ? 'Simulacao pausada'
+    : ('VORs ativos: ' + vors.length + ' | AP: ' + (apEnabled ? 'LIGADO' : 'DESLIGADO'));
+
+  updateNavReadout();
+}
+
+function resetAircraftToCenter() {
+  ac.x = worldW / 2;
+  ac.y = worldH / 2;
+  ac.bank = 0;
+  beginTrailBreak();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  LOOP PRINCIPAL
+// ═══════════════════════════════════════════════════════════
+let last = 0;
+
+function loop(ts) {
+  const dt = Math.min((ts - last) / 1000, 0.05); // máx 50 ms/frame
+  last = ts;
+
+  // Suavização visual da seta de heading bug.
+  headingBugDisplay = normalizeHeading(
+    headingBugDisplay + headingError(headingBug, headingBugDisplay) * Math.min(1, dt * 8)
+  );
+
+  // Horizonte responde mais claramente as curvas e estabilizacao em voo reto.
+  const cockpitBankTarget = apEnabled ? ac.bank * 1.25 : ac.bank;
+  cockpitBankDisplay += (cockpitBankTarget - cockpitBankDisplay) * Math.min(1, dt * 10);
+
+  if (!gameOver && !isPaused) {
+    // Aplicar joystick virtual continuamente
+    if (joystick.active && !aircraftInteraction.active) {
+      ac.bank  = Math.max(-MAX_BANK, Math.min(MAX_BANK, ac.bank + joystick.dx * 60 * dt));
+      ac.speed = Math.max(MIN_SPEED,  Math.min(MAX_SPEED, ac.speed - joystick.dy * 40 * dt));
+    }
+
+    if (!aircraftInteraction.active) {
+      if (apEnabled) {
+        const err = headingError(headingBug, ac.hdg);
+        const desiredBank = clamp(err * 1.3, -AP_MAX_BANK, AP_MAX_BANK);
+        ac.bank += (desiredBank - ac.bank) * Math.min(1, dt * 4);
+      }
+
+      const turnRate = ac.bank * TURN_GAIN;
+      ac.hdg = (ac.hdg + turnRate * dt + 360) % 360;
+
+      const pps = Math.pow(ac.speed / MAX_SPEED, 2.5) * MAX_SPEED * 0.3;
+      const rad = (ac.hdg - 90) * Math.PI / 180;
+      ac.x += Math.cos(rad) * pps * dt;
+      ac.y += Math.sin(rad) * pps * dt;
+
+      if (
+        ac.x <= AIRCRAFT_RESET_MARGIN ||
+        ac.x >= worldW - AIRCRAFT_RESET_MARGIN ||
+        ac.y <= AIRCRAFT_RESET_MARGIN ||
+        ac.y >= worldH - AIRCRAFT_RESET_MARGIN
+      ) {
+        resetAircraftToCenter();
+      }
+    }
+
+    if (config.showTrail) {
+      trail.push({ x: ac.x, y: ac.y });
+      if (trail.length > 1800) trail.shift();
+    }
+  }
+
+  // Detectar passagem sobre o VOR sintonizado em modo invisível
+  if (config.hideAircraftAndVors && selectedVor && !autoRetuneTimer) {
+    const now = Date.now();
+    const d = Math.hypot(ac.x - selectedVor.x, ac.y - selectedVor.y);
+    if (d < FLYOVER_THRESHOLD && now - (selectedVor.lastFlyover || 0) > FLYOVER_SHOW_MS) {
+      const overVor = selectedVor;
+      const candidates = vors.filter(v => v.freq !== overVor.freq);
+      const nextVor = candidates.length > 0
+        ? candidates[Math.floor(Math.random() * candidates.length)]
+        : null;
+      overVor.lastFlyover = now;
+      autoRetuneTimer = setTimeout(() => {
+        autoRetuneTimer = null;
+        if (nextVor) {
+          navFreqEl.value = String(nextVor.freq);
+          tuneNav();
+          updateNavFrequencyOptions();
+          updateNavReadout();
+        }
+      }, FLYOVER_SHOW_MS);
+    }
+  }
+
+  drawMap();
+  drawCockpit();
+  updateHUD();
+
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CONTROLES
+// ═══════════════════════════════════════════════════════════
+document.getElementById('bUp').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.speed = Math.min(ac.speed + 10, MAX_SPEED);
+});
+document.getElementById('bDown').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  ac.speed = Math.max(ac.speed - 10, MIN_SPEED);
+});
+document.getElementById('bLeft').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  apEnabled = false;
+  apToggleBtn.textContent = 'AP OFF';
+  ac.bank = Math.max(-MAX_BANK, ac.bank - 15);
+});
+document.getElementById('bRight').addEventListener('click', () => {
+  if (gameOver || isPaused) return;
+  apEnabled = false;
+  apToggleBtn.textContent = 'AP OFF';
+  ac.bank = Math.min(MAX_BANK, ac.bank + 15);
+});
+
+apToggleBtn.addEventListener('click', () => {
+  apEnabled = !apEnabled;
+  apToggleBtn.textContent = apEnabled ? 'AP ON' : 'AP OFF';
+});
+
+headingKnobEl.addEventListener('wheel', (evt) => {
+  evt.preventDefault();
+  const step = evt.shiftKey ? 5 : 1;
+  const delta = evt.deltaY < 0 ? step : -step;
+  setHeadingBug(headingBug + delta);
+}, { passive: false });
+
+headingKnobEl.addEventListener('pointerdown', (evt) => {
+  evt.preventDefault();
+  headingKnobState.dragging = true;
+  headingKnobState.pointerId = evt.pointerId;
+  headingKnobEl.setPointerCapture(evt.pointerId);
+  pointerToHeadingBug(evt);
+});
+
+headingKnobEl.addEventListener('pointermove', (evt) => {
+  if (!headingKnobState.dragging || evt.pointerId !== headingKnobState.pointerId) return;
+  pointerToHeadingBug(evt);
+});
+
+function stopHeadingKnobDrag(evt) {
+  if (!headingKnobState.dragging || evt.pointerId !== headingKnobState.pointerId) return;
+  if (headingKnobEl.hasPointerCapture(evt.pointerId)) {
+    headingKnobEl.releasePointerCapture(evt.pointerId);
+  }
+  headingKnobState.dragging = false;
+  headingKnobState.pointerId = null;
+}
+
+headingKnobEl.addEventListener('pointerup', stopHeadingKnobDrag);
+headingKnobEl.addEventListener('pointercancel', stopHeadingKnobDrag);
+
+navTuneBtn.addEventListener('click', () => {
+  tuneNav();
+  updateNavReadout();
+});
+
+navFreqEl.addEventListener('change', () => {
+  tuneNav();
+  updateNavReadout();
+});
+
+cMap.addEventListener('pointerdown', evt => {
+  if (gameOver) return;
+
+  const point = getMapPointerPosition(evt);
+
+  // Prioridade: handle de rotação > corpo da aeronave > VOR
+  let mode = '';
+  if (isPointNearRotateHandle(point.x, point.y)) {
+    mode = 'rotate';
+  } else if (isPointNearPlaneBody(point.x, point.y)) {
+    mode = 'drag';
+  }
+
+  if (mode) {
+    evt.preventDefault();
+    aircraftInteraction.active = true;
+    aircraftInteraction.mode = mode;
+    aircraftInteraction.pointerId = evt.pointerId;
+    if (mode === 'drag') {
+      aircraftInteraction.dragOffsetX = point.x - ac.x;
+      aircraftInteraction.dragOffsetY = point.y - ac.y;
+      beginTrailBreak();
+    } else {
+      ac.bank = 0;
+      updateAircraftHeadingFromPoint(point.x, point.y);
+    }
+    cMap.setPointerCapture(evt.pointerId);
+    return;
+  }
+
+  // Verificar clique em VOR
+  const vorIdx = findVorNearPoint(point.x, point.y);
+  if (vorIdx >= 0) {
+    evt.preventDefault();
+    vorInteraction.active = true;
+    vorInteraction.vorIndex = vorIdx;
+    vorInteraction.pointerId = evt.pointerId;
+    vorInteraction.dragOffsetX = point.x - vors[vorIdx].x;
+    vorInteraction.dragOffsetY = point.y - vors[vorIdx].y;
+    cMap.setPointerCapture(evt.pointerId);
+  }
+});
+
+cMap.addEventListener('pointermove', evt => {
+  if (aircraftInteraction.active && evt.pointerId === aircraftInteraction.pointerId) {
+    evt.preventDefault();
+    const point = getMapPointerPosition(evt);
+    if (aircraftInteraction.mode === 'drag') {
+      ac.x = clamp(point.x - aircraftInteraction.dragOffsetX, 0, worldW);
+      ac.y = clamp(point.y - aircraftInteraction.dragOffsetY, 0, worldH);
+    } else if (aircraftInteraction.mode === 'rotate') {
+      ac.bank = 0;
+      updateAircraftHeadingFromPoint(point.x, point.y);
+    }
+    return;
+  }
+
+  if (vorInteraction.active && evt.pointerId === vorInteraction.pointerId) {
+    evt.preventDefault();
+    const point = getMapPointerPosition(evt);
+    const vor = vors[vorInteraction.vorIndex];
+    if (vor) {
+      vor.x = clamp(point.x - vorInteraction.dragOffsetX, 0, worldW);
+      vor.y = clamp(point.y - vorInteraction.dragOffsetY, 0, worldH);
+    }
+  }
+});
+
+function endAircraftInteraction(evt) {
+  if (!aircraftInteraction.active || evt.pointerId !== aircraftInteraction.pointerId) return;
+  if (cMap.hasPointerCapture(evt.pointerId)) {
+    cMap.releasePointerCapture(evt.pointerId);
+  }
+  aircraftInteraction.active = false;
+  aircraftInteraction.mode = '';
+  aircraftInteraction.pointerId = null;
+  aircraftInteraction.dragOffsetX = 0;
+  aircraftInteraction.dragOffsetY = 0;
+}
+
+function endVorInteraction(evt) {
+  if (!vorInteraction.active || evt.pointerId !== vorInteraction.pointerId) return;
+  if (cMap.hasPointerCapture(evt.pointerId)) {
+    cMap.releasePointerCapture(evt.pointerId);
+  }
+  vorInteraction.active = false;
+  vorInteraction.vorIndex = -1;
+  vorInteraction.pointerId = null;
+  vorInteraction.dragOffsetX = 0;
+  vorInteraction.dragOffsetY = 0;
+}
+
+cMap.addEventListener('pointerup', evt => { endAircraftInteraction(evt); endVorInteraction(evt); });
+cMap.addEventListener('pointercancel', evt => { endAircraftInteraction(evt); endVorInteraction(evt); });
+
+// ═══════════════════════════════════════════════════════════
+//  JOYSTICK VIRTUAL
+// ═══════════════════════════════════════════════════════════
+const joystickBase = document.getElementById('joystick-wrap') || document.getElementById('cJoystick');
+const joystickKnob = document.getElementById('joystick-knob');
+
+const joystick = { active: false, dx: 0, dy: 0 };
+
+function joystickUpdate(clientX, clientY) {
+  if (!joystickBase) return;
+  const rect = joystickBase.getBoundingClientRect();
+  const cx = rect.left + rect.width  / 2;
+  const cy = rect.top  + rect.height / 2;
+  let dx = clientX - cx;
+  let dy = clientY - cy;
+  const maxDist = rect.width / 2 - 6;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > maxDist) {
+    dx = dx / dist * maxDist;
+    dy = dy / dist * maxDist;
+  }
+  joystick.dx = dx / maxDist;  // -1 (esq) … +1 (dir)
+  joystick.dy = dy / maxDist;  // -1 (cima) … +1 (baixo)
+  if (joystickKnob) {
+    joystickKnob.style.transform =
+      `translate(calc(-50% + ${dx.toFixed(1)}px), calc(-50% + ${dy.toFixed(1)}px))`;
+  }
+}
+
+function joystickReset() {
+  joystick.active = false;
+  joystick.dx = 0;
+  joystick.dy = 0;
+  if (joystickKnob) {
+    joystickKnob.style.transform = 'translate(-50%, -50%)';
+  }
+}
+
+// Touch
+if (joystickBase) {
+  joystickBase.addEventListener('touchstart', e => {
+    e.preventDefault();
+    joystick.active = true;
+    joystickUpdate(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  joystickBase.addEventListener('touchmove', e => {
+    e.preventDefault();
+    joystickUpdate(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+
+  joystickBase.addEventListener('touchend',   e => { e.preventDefault(); joystickReset(); }, { passive: false });
+  joystickBase.addEventListener('touchcancel', e => { e.preventDefault(); joystickReset(); }, { passive: false });
+
+  // Mouse (para teste no desktop)
+  joystickBase.addEventListener('mousedown', e => {
+    joystick.active = true;
+    joystickUpdate(e.clientX, e.clientY);
+    const onMove = ev => joystickUpdate(ev.clientX, ev.clientY);
+    const onUp   = () => {
+      joystickReset();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'p' || e.key === 'P') {
+    if (gameOver) return;
+    isPaused = !isPaused;
+    pauseBtn.textContent = isPaused ? 'Retomar' : 'Pause';
+    return;
+  }
+
+  if (e.key === 'h' || e.key === 'H') {
+    e.preventDefault();
+    window.open('ajuda.html', '_blank', 'noopener');
+    return;
+  }
+
+  if (gameOver || isPaused) return;
+  switch (e.key) {
+    case 'ArrowUp':
+      e.preventDefault();
+      ac.speed = Math.min(ac.speed + 10, MAX_SPEED);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      ac.speed = Math.max(ac.speed - 10, MIN_SPEED);
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      apEnabled = false;
+      apToggleBtn.textContent = 'AP OFF';
+      ac.bank = Math.max(-MAX_BANK, ac.bank - 5);
+      break;
+    case 'ArrowRight':
+      e.preventDefault();
+      apEnabled = false;
+      apToggleBtn.textContent = 'AP OFF';
+      ac.bank = Math.min(MAX_BANK, ac.bank + 5);
+      break;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  INICIALIZAÇÃO
+// ═══════════════════════════════════════════════════════════
+syncPanelFromConfig();
+cfgMapSatelliteEl.disabled = !config.useGoogleMap;
+cfgMapQueryEl.disabled = !config.useGoogleMap;
+cfgMapZoomEl.disabled = !config.useGoogleMap;
+setupMapBackground();
+resize();
+enforceAreaCLayout();
+ac.x = worldW / 2;
+ac.y = worldH / 2;
+headingBug = ac.hdg;
+headingBugDisplay = headingBug;
+cockpitBankDisplay = ac.bank;
+headingKnobEl.style.transform = 'rotate(' + headingBug + 'deg)';
+updateHeadingBugReadout();
+tuneNav();
+
+// Envia log ao sair/fechar a aba
+window.addEventListener('pagehide', () => { enviarLog('saida'); });
+window.addEventListener('beforeunload', () => { enviarLog('saida'); });
+
+initLgpd();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
