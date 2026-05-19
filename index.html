@@ -69,6 +69,20 @@
       0%, 100% { transform: translateX(-50%) translateY(0);   opacity: .55; }
       50%       { transform: translateX(-50%) translateY(9px); opacity: 1;   }
     }
+
+    /* ─── INDICADOR DE SCROLL FIXO ─── */
+    .scroll-fixed {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      z-index: 300;
+      background: none; border: none; cursor: pointer; padding: 0;
+      color: rgba(0,170,255,.55);
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      animation: scrollBounce 2s ease-in-out infinite;
+      transition: opacity .35s, visibility .35s;
+    }
+    .scroll-fixed:hover { color: var(--blue); }
+    .scroll-fixed span { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; font-family: 'Courier New', monospace; }
+    .scroll-fixed.hidden { opacity: 0; visibility: hidden; }
     #cHero {
       position: absolute; inset: 0; width: 100%; height: 100%;
     }
@@ -610,6 +624,14 @@
   </p>
   <p class="ft-copy">© 2026 L. Cavamura Jr. &mdash; Todos os direitos reservados.</p>
 </footer>
+
+<button class="scroll-fixed hidden" id="scrollFixed" aria-label="Próxima seção">
+  <span>mais</span>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+    <polyline points="6 15 12 21 18 15" opacity=".4"/>
+  </svg>
+</button>
 
 <script>
 'use strict';
@@ -1415,6 +1437,28 @@ function drawModeImc() {
   requestAnimationFrame(drawModeImc);
 }
 requestAnimationFrame(drawModeImc);
+
+// ──────────────────────────────────────────────
+//  INDICADOR DE SCROLL FIXO
+// ──────────────────────────────────────────────
+(function () {
+  const btn    = document.getElementById('scrollFixed');
+  const hero   = document.querySelector('.hero');
+  const footer = document.querySelector('footer');
+  let heroVisible   = true;
+  let footerVisible = false;
+
+  function sync() {
+    btn.classList.toggle('hidden', heroVisible || footerVisible);
+  }
+
+  new IntersectionObserver(([e]) => { heroVisible   = e.isIntersecting; sync(); }, { threshold: 0.05 }).observe(hero);
+  new IntersectionObserver(([e]) => { footerVisible = e.isIntersecting; sync(); }, { threshold: 0.05 }).observe(footer);
+
+  btn.addEventListener('click', () => {
+    window.scrollBy({ top: window.innerHeight * 0.88, behavior: 'smooth' });
+  });
+}());
 
 </script>
 </body>
