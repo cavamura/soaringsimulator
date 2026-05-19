@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ajuda - Flight Simulator</title>
+  <title>Ajuda - Simulador IFR</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -36,57 +36,87 @@
       padding-bottom: 6px;
     }
     p { margin: 0 0 10px; }
-    ul, ol {
-      margin: 8px 0 12px;
-      padding-left: 24px;
-    }
-    li { margin: 4px 0; }
-    .card {
-      border: 1px solid #1e334a;
-      background: rgba(9, 22, 38, 0.75);
-      padding: 12px;
-      margin-top: 10px;
-    }
-    .small { color: #9bb3d1; font-size: 13px; }
-    a { color: #8fd4ff; }
-    .contact {
-      border: 1px solid #356083;
-      background: rgba(15, 35, 55, 0.8);
-      padding: 12px;
-    }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <h1>Ajuda / Manual do Jogo</h1>
-    <p class="small">Flight Simulator - Simulador de Voo com t&eacute;rmicas</p>
+    <h1>Ajuda / Manual</h1>
+    <p class="small">IFR Training Simulator - Navega&ccedil;&atilde;o VOR e Piloto Autom&aacute;tico</p>
 
-    <h2>Objetivo do Jogo</h2>
+    <h2>Objetivo</h2>
     <p>
-      O objetivo &eacute; manter a aeronave voando pelo maior tempo poss&iacute;vel, aproveitando as t&eacute;rmicas
-      para ganhar altitude e evitando chegar ao solo (0 m).
+      Dominar a navega&ccedil;&atilde;o VOR (VHF Omnidirectional Range), sintonizar frequ&ecirc;ncias de r&aacute;dio, interpretar o RMI (Radio Magnetic Indicator)
+      e usar o piloto autom&aacute;tico para manter proas selecionadas. Um simulador voltado ao treinamento de navega&ccedil;&atilde;o a&eacute;rea.
     </p>
 
-    <h2>Como o Jogo Funciona</h2>
+    <h2>Como o Simulador Funciona</h2>
     <div class="card">
-      <p><strong>Se&ccedil;&atilde;o A (Mapa):</strong> mostra a aeronave, trajet&oacute;ria e t&eacute;rmicas (quando habilitadas).</p>
-      <p><strong>Se&ccedil;&atilde;o B (Cockpit):</strong> horizonte artificial e dados de atitude/rumo.</p>
-      <p><strong>Se&ccedil;&atilde;o C (Instrumentos):</strong> veloc&iacute;metro, alt&iacute;metro, vari&ocirc;metro e controles.</p>
+      <p><strong>Se&ccedil;&atilde;o A (Mapa):</strong> vista superior da aeronave, trajet&oacute;ria, e esta&ccedil;&otilde;es VOR (s&iacute;mbolos hexagonais com frequ&ecirc;ncia).</p>
+      <p><strong>Se&ccedil;&atilde;o B (Cockpit):</strong> horizonte artificial com indica&ccedil;&atilde;o de atitude e rumo (heading).</p>
+      <p><strong>Se&ccedil;&atilde;o C (Painel IFR):</strong> RMI (Radio Magnetic Indicator), seletor de proa (heading bug), NAV/DME e piloto autom&aacute;tico.</p>
       <p>
-        As t&eacute;rmicas s&atilde;o zonas circulares que aumentam a taxa de subida. Fora delas, a aeronave tende
-        a perder altitude gradualmente.
+        <strong>VORs (Esta&ccedil;&otilde;es):</strong> At&eacute; 3 esta&ccedil;&otilde;es VOR aparecem aleatoriamente no mapa. Cada VOR possui uma frequ&ecirc;ncia VHF NAV e est&aacute; identificado
+        com seu nome (VOR A, VOR B, VOR C). Selecione uma esta&ccedil;&atilde;o no painel NAV para navegar at&eacute; ela.
       </p>
       <p>
-        Durante a simula&ccedil;&atilde;o, as t&eacute;rmicas s&atilde;o recriadas automaticamente em novos locais,
-        conforme o intervalo configurado pelo usu&aacute;rio.
+        <strong>RMI:</strong> Mostra o rumo magn&eacute;tico atual (lubber line em amarelo) e, quando uma esta&ccedil;&atilde;o VOR est&aacute; sintonizada,
+        exibe um ponteiro vermelho indicando a dire&ccedil;&atilde;o (bearing) at&eacute; a esta&ccedil;&atilde;o.
       </p>
       <p>
-        Em cerca de <strong>50% das t&eacute;rmicas</strong>, aparecem indicadores visuais sobre o c&iacute;rculo:
-        <strong>nuvens c&uacute;mulus</strong> (vista superior) ou um grupo de <strong>3 urubus</strong>
-        voando em c&iacute;rculo.
+        <strong>NAV/DME:</strong> Sintonize a frequ&ecirc;ncia de um VOR usando o campo NAV e clique em "Sintonizar". O painel exibe
+        o DME (distance to station) em milhas n&aacute;uticas.
+      </p>
+      <p>
+        <strong>Piloto Autom&aacute;tico:</strong> Ligue o AP (Autopilot) e configure uma proa no indicador de dire&ccedil;&atilde;o. A aeronave
+        automaticamente curva e se estabiliza na proa selecionada.
       </p>
     </div>
 
+    <h2>Guia de Opera&ccedil;&atilde;o</h2>
+    ul, ol {
+      margin: 8px 0 12px;
+      <li>A miss&atilde;o gera at&eacute; 3 esta&ccedil;&otilde;es VOR aleatoriamente na regi&atilde;o do mapa.</li>
+      <li>Para navegar para uma esta&ccedil;&atilde;o VOR:</li>
+    }
+    li { margin: 4px 0; }
+      <li>Localize a frequ&ecirc;ncia da esta&ccedil;&atilde;o no mapa (exibida no s&iacute;mbolo hexagonal).</li>
+      <li>Digite a frequ&ecirc;ncia no campo <strong>NAV</strong> e clique em <strong>Sintonizar</strong>.</li>
+      <li>Observe o RMI: o ponteiro vermelho aponta para a esta&ccedil;&atilde;o.</li>
+      <li>O painel <strong>DME</strong> mostra a dist&acirc;ncia at&eacute; a esta&ccedil;&atilde;o em milhas n&aacute;uticas.</li>
+    }
+    .small { color: #9bb3d1; font-size: 13px; }
+    a { color: #8fd4ff; }
+      <li>Usando o Piloto Autom&aacute;tico:</li>
+      border: 1px solid #356083;
+      background: rgba(15, 35, 55, 0.8);
+      <li>Ligue o <strong>AP (Autopilot)</strong> clicando no bot&atilde;o "AP OFF" para mudar para "AP ON".</li>
+      <li>Digite a proa desejada no campo <strong>Indicador de dire&ccedil;&atilde;o / Proa</strong> e clique em <strong>Setar</strong>.</li>
+      <li>A aeronave automaticamente curva at&eacute; estabilizar na proa selecionada.</li>
+      <li>Com AP desligado, use os bot&otilde;es <strong>&larr; / &rarr;</strong> para pilotar manualmente.</li>
+</head>
+<body>
+  <div class="wrap">
+      <li>Controles Manuais (AP desligado):</li>
+        Em cerca de <strong>50% das t&eacute;rmicas</strong>, aparecem indicadores visuais sobre o c&iacute;rculo:
+     <ul>
+      <li><strong>&larr; / &rarr;</strong> Aumenta ou diminui o &acirc;ngulo de curva (bank).</li>
+      <li><strong>&uarr; / &darr;</strong> Aumenta ou reduz a velocidade da aeronave.</li>
+      <li><strong>P</strong> Pausa e retoma a simula&ccedil;&atilde;o.</li>
+      <li><strong>H</strong> Abre este manual de ajuda.</li>
+    </ul>
+
+    <ol start="5">
+      <li>Configura&ccedil;&atilde;o:</li>
+    </ol>
+    <ul>
+      <li>Painel <strong>"Configura&ccedil;&atilde;o da Simula&ccedil;&atilde;o"</strong> permite ativar <strong>Google Maps</strong> como fundo do mapa.</li>
+      <li>Op&ccedil;&atilde;o <strong>"Mostrar trajet&oacute;ria"</strong> desenha o rastro da aeronave no mapa.</li>
+      <li>URL de log opcional para registrar dados de voo em servidor remoto ou Google Apps Script.</li>
+    </ul>
+
+    <h2>Dicas de Treinamento</h2>
+        <strong>nuvens c&uacute;mulus</strong> (vista superior) ou um grupo de <strong>3 urubus</strong>
+      <li>Comece sintonizando uma esta&ccedil;&atilde;o pr&oacute;xima para familiarizar-se com o RMI e DME.</li>
+      <li>Pratique o uso do piloto autom&aacute;tico mantendo uma proa constante enquanto se aproxima de uma esta&ccedil;&atilde;o.</li>
+      <li>Combine navega&ccedil;&atilde;o manual com AP: solte o AP para ajustes finos perto da esta&ccedil;&atilde;o.</li>
+      <li>Acompanhe a dist&acirc;ncia DME conforme voc&ecirc; se aproxima da esta&ccedil;&atilde;o (deve diminuir progressivamente).</li>
+      <li>Experimente diferentes frequ&ecirc;ncias VOR para treinar m&uacute;ltiplas abordagens.</li>
     <h2>Manual de Uso</h2>
     <ol>
       <li>Abra o simulador no navegador.</li>
